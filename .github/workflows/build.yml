@@ -16,6 +16,14 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache Rosetta build directory
+        uses: actions/cache@v4
+        with:
+          path: source/build
+          key: ${{ runner.os }}-rosetta-build-${{ hashFiles('source/**/*.cc', 'source/**/*.hh', 'source/**/*.cpp', 'source/**/*.h', 'source/SConstruct', 'source/**/SConscript') }}
+          restore-keys: |
+            ${{ runner.os }}-rosetta-build-
+
       - name: Build Rosetta inside a container
         run: |
           docker run --rm \
