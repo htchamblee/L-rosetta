@@ -366,11 +366,12 @@ figure_out_base_pair_orientation(
 
 	utility::vector1< kinematics::Stub > const & base_stubs( rna_centroid_info.base_stubs() );
 
-	kinematics::Stub const & stub_i( base_stubs[i] );
+	// A D:L pair is classified with both bases in the raw frame (see chemical::rna::base_stub_for_pair).
+	kinematics::Stub const stub_i( core::chemical::rna::base_stub_for_pair( base_stubs[i], pose.residue( i ), pose.residue( j ) ) );
 	Matrix const & M_i( stub_i.M );
 	Vector const & z_i = M_i.col_z();
 
-	kinematics::Stub const & stub_j( base_stubs[j] );
+	kinematics::Stub const stub_j( core::chemical::rna::base_stub_for_pair( base_stubs[j], pose.residue( j ), pose.residue( i ) ) );
 	Matrix const & M_j( stub_j.M );
 	Vector const & z_j = M_j.col_z();
 	Real const cos_theta = dot_product( z_i, z_j );
@@ -493,12 +494,13 @@ bases_are_coplanar(
 	utility::vector1< kinematics::Stub > const & base_stubs( rna_centroid_info.base_stubs() );
 
 	Vector const & centroid_i( base_centroids[i] );
-	kinematics::Stub const & stub_i( base_stubs[i] );
+	// A D:L pair is classified with both bases in the raw frame (see chemical::rna::base_stub_for_pair).
+	kinematics::Stub const stub_i( core::chemical::rna::base_stub_for_pair( base_stubs[i], pose.residue( i ), pose.residue( j ) ) );
 	Matrix const & M_i( stub_i.M );
 	Vector const & z_i = M_i.col_z();
 
 	Vector const & centroid_j( base_centroids[j] );
-	kinematics::Stub const & stub_j( base_stubs[j] );
+	kinematics::Stub const stub_j( core::chemical::rna::base_stub_for_pair( base_stubs[j], pose.residue( j ), pose.residue( i ) ) );
 
 	Vector d_ij = centroid_j - centroid_i;
 	Real const dist_z = dot_product( d_ij, z_i );
@@ -563,17 +565,16 @@ classify_base_pairs(
 	for ( Size i = 1; i <= pose.size(); ++i ) {
 		if ( !pose.residue_type( i ).is_RNA() ) continue;
 
-		kinematics::Stub const & stub_i( base_stubs[i] );
 		Vector const & centroid_i( base_centroids[i] );
-		Matrix const & M_i( stub_i.M );
-		//Vector const & x_i = M_i.col_x();
-		//Vector const & y_i = M_i.col_y();
-		Vector const & z_i = M_i.col_z();
 
 		for ( Size j = 1; j <= pose.size(); ++j ) {
 			if ( !pose.residue_type( j ).is_RNA() ) continue;
 
-			kinematics::Stub const & stub_j( base_stubs[j] );
+			// A D:L pair is classified with both bases in the raw frame (see chemical::rna::base_stub_for_pair).
+			kinematics::Stub const stub_i( core::chemical::rna::base_stub_for_pair( base_stubs[i], pose.residue( i ), pose.residue( j ) ) );
+			Matrix const & M_i( stub_i.M );
+			Vector const & z_i = M_i.col_z();
+			kinematics::Stub const stub_j( core::chemical::rna::base_stub_for_pair( base_stubs[j], pose.residue( j ), pose.residue( i ) ) );
 			Vector const & centroid_j( base_centroids[j] );
 			Matrix const & M_j( stub_j.M );
 			Vector const & z_j = M_j.col_z();

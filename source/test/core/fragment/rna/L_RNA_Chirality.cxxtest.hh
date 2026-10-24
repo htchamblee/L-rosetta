@@ -47,6 +47,10 @@
 #include <core/pose/variant_util.hh>
 #include <core/pose/full_model_info/FullModelInfo.hh>
 #include <core/chemical/ChemicalManager.hh>
+#include <core/import_pose/import_pose.hh>
+#include <utility/string_util.hh>
+#include <core/pose/rna/BasePair.hh>
+#include <core/pose/rna/RNA_BasePairClassifier.hh>
 #include <core/optimization/AtomTreeMultifunc.hh>
 #include <core/optimization/MinimizerMap.hh>
 #include <core/optimization/NumericalDerivCheckResult.hh>
@@ -461,6 +465,57 @@ public:
 		Real const d_after = sfxn( d_pose ), l_after = sfxn( l_pose );
 		TS_ASSERT( std::abs( d_after - d_before ) > 1.0 ); // the restraints do something
 		TS_ASSERT_DELTA( l_after - l_before, d_after - d_before, 1.0e-3 );
+	}
+
+	// A base does not depend on sugar chirality, so a D:L base pair must be scored and classified like the D:D pair
+	// with the same base coordinates. Residue 12 (U, paired with G1) of a D hairpin is replaced by an L-U with the
+	// same base atoms; its sugar and backbone are reflected through the base plane.
+	void test_heterochiral_pair_scores_like_homochiral_pair() {
+		pose::Pose d_pose, l_pose;
+		import_pose::pose_from_file( d_pose, "core/fragment/rna/gcaa_hairpin_D.pdb", import_pose::PDB_file );
+		pose::make_pose_from_sequence( l_pose, "333232113224", "fa_standard" );
+		Size const n = 12;
+		conformation::Residue const & d_rsd( d_pose.residue( n ) );
+		Vector const centroid = get_rna_base_centroid( d_rsd, false );
+		Vector const normal = get_rna_base_coordinate_system( d_rsd, centroid ).col_z();
+		conformation::ResidueOP l_rsd( l_pose.residue( n ).clone() );
+		for ( Size ii = 1; ii <= l_rsd->natoms(); ++ii ) {
+			std::string const name = utility::strip( l_rsd->atom_name( ii ) );
+			TS_ASSERT( d_rsd.has( name ) );
+			if ( !d_rsd.has( name ) ) continue;
+			Vector const x = d_rsd.xyz( name );
+			bool const base_atom = name.find( '\'' ) == std::string::npos && name != "P" && name != "OP1" && name != "OP2";
+			l_rsd->set_xyz( ii, base_atom ? x : Vector( x - 2.0 * dot( x - centroid, normal ) * normal ) );
+		}
+		pose::Pose mixed_pose( d_pose );
+		mixed_pose.replace_residue( n, *l_rsd, false );
+		TS_ASSERT( mixed_pose.residue_type( n ).is_l_rna() );
+		TS_ASSERT( !mixed_pose.residue_type( 1 ).is_l_rna() );
+
+		scoring::ScoreFunctionOP sfxn = scoring::ScoreFunctionFactory::create_score_function( "rna/denovo/rna_lores" );
+		( *sfxn )( d_pose );
+		( *sfxn )( mixed_pose );
+		for ( scoring::ScoreType const st : { scoring::rna_base_pair, scoring::rna_base_axis, scoring::rna_base_stagger,
+				scoring::rna_base_stack, scoring::rna_base_stack_axis } ) {
+			Real const d_e = d_pose.energies().total_energies()[ st ];
+			Real const mixed_e = mixed_pose.energies().total_energies()[ st ];
+			TR << "heterochiral pair " << scoring::name_from_score_type( st ) << " D:D " << d_e << " D:L " << mixed_e << std::endl;
+			TS_ASSERT_DELTA( mixed_e, d_e, 1.0e-6 * std::max( 1.0, std::abs( d_e ) ) );
+		}
+		TS_ASSERT( d_pose.energies().total_energies()[ scoring::rna_base_pair ] < -1.0 ); // the pairs are scored
+
+		utility::vector1< pose::rna::BasePair > const d_pairs = pose::rna::classify_base_pairs( d_pose );
+		utility::vector1< pose::rna::BasePair > const mixed_pairs = pose::rna::classify_base_pairs( mixed_pose );
+		TS_ASSERT_EQUALS( mixed_pairs.size(), d_pairs.size() );
+		TS_ASSERT( d_pairs.size() >= 4 );
+		for ( Size k = 1; k <= std::min( d_pairs.size(), mixed_pairs.size() ); ++k ) {
+			TS_ASSERT_EQUALS( mixed_pairs[ k ].res1(), d_pairs[ k ].res1() );
+			TS_ASSERT_EQUALS( mixed_pairs[ k ].res2(), d_pairs[ k ].res2() );
+			TS_ASSERT_EQUALS( mixed_pairs[ k ].edge1(), d_pairs[ k ].edge1() );
+			TS_ASSERT_EQUALS( mixed_pairs[ k ].edge2(), d_pairs[ k ].edge2() );
+			TS_ASSERT_EQUALS( mixed_pairs[ k ].orientation(), d_pairs[ k ].orientation() );
+			TS_ASSERT_EQUALS( mixed_pairs[ k ].LW_orientation(), d_pairs[ k ].LW_orientation() );
+		}
 	}
 
 };

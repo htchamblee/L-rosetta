@@ -155,6 +155,15 @@ get_rna_base_coordinate_system_chirality_normalized( core::conformation::Residue
 core::kinematics::Stub
 get_rna_base_coordinate_system_stub_chirality_normalized( core::conformation::Residue const & rsd );
 
+/// @brief Base stub of rsd for scoring its base against the base of partner.
+/// @details normalized_stub is rsd's chirality-normalized stub. Base-base geometry does not depend on
+///  sugar chirality, so a D:L pair is scored like the D:D pair with the same base coordinates: both
+///  residues use the raw (D-convention) frame, i.e. the L residue's z axis is negated back. D:D and L:L
+///  pairs keep the normalized stubs.
+core::kinematics::Stub
+base_stub_for_pair( core::kinematics::Stub const & normalized_stub, core::conformation::Residue const & rsd,
+	core::conformation::Residue const & partner );
+
 bool
 is_base_phosphate_atom_pair( conformation::Residue const & rsd_1, conformation::Residue const & rsd_2, Size const atomno_1, Size const atomno_2);
 

@@ -1399,6 +1399,16 @@ get_rna_base_coordinate_system_stub_chirality_normalized( core::conformation::Re
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+core::kinematics::Stub
+base_stub_for_pair( core::kinematics::Stub const & normalized_stub, core::conformation::Residue const & rsd,
+	core::conformation::Residue const & partner )
+{
+	core::kinematics::Stub stub( normalized_stub );
+	if ( rsd.is_l_rna() && !partner.is_l_rna() ) stub.M.col_z( -1.0 * stub.M.col_z() );
+	return stub;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Check whether one of the atom beyond to a base and another to a phosphate. Doesn't have to be on the same nucleotide.
 bool
 is_base_phosphate_atom_pair( conformation::Residue const & rsd_1, conformation::Residue const & rsd_2, Size const atomno_1, Size const atomno_2 ){

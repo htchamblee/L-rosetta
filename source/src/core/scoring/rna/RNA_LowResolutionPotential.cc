@@ -759,7 +759,6 @@ RNA_LowResolutionPotential::update_rna_base_base_interactions(
 		Matrix const & M_i( stub_i.M );
 		Vector const & x_i = M_i.col_x();
 		Vector const & y_i = M_i.col_y();
-		Vector const & z_i = M_i.col_z();
 
 		for ( utility::graph::Graph::EdgeListConstIter
 				iter = energy_graph.get_node( i )->const_edge_list_begin();
@@ -774,12 +773,14 @@ RNA_LowResolutionPotential::update_rna_base_base_interactions(
 			if ( !res_j.is_RNA() ) continue;
 
 			Vector const & centroid_j( base_centroids[j] );
-			kinematics::Stub const & stub_j( base_stubs[j] );
+			// A D:L pair is scored with both bases in the raw frame (see chemical::rna::base_stub_for_pair).
+			Vector const z_i_pair = chemical::rna::base_stub_for_pair( stub_i, res_i, res_j ).M.col_z();
+			kinematics::Stub const stub_j( chemical::rna::base_stub_for_pair( base_stubs[j], res_j, res_i ) );
 
 			Vector d_ij = centroid_j - centroid_i;
 			Real const dist_x = dot_product( d_ij, x_i );
 			Real const dist_y = dot_product( d_ij, y_i );
-			Real const dist_z = dot_product( d_ij, z_i );
+			Real const dist_z = dot_product( d_ij, z_i_pair );
 			Real const rho2 = dist_x*dist_x + dist_y*dist_y;
 
 			//This could all be precomputed, actually.
@@ -787,7 +788,7 @@ RNA_LowResolutionPotential::update_rna_base_base_interactions(
 			//   Vector const & x_j = M_j.col_x();
 			//   Vector const & y_j = M_j.col_y();
 			Vector const & z_j = M_j.col_z();
-			Real const cos_theta = dot_product( z_i, z_j );
+			Real const cos_theta = dot_product( z_i_pair, z_j );
 			//This arc-cosine costs a lot actually:
 			//   Real const theta = numeric::conversions::degrees( numeric::arccos( cos_theta ) );
 
@@ -881,8 +882,11 @@ RNA_LowResolutionPotential::eval_rna_base_pair_energy(
 ) const {
 	// Following fills in arrays inside rna_raw_base_base_info, which you have to
 	// look inside to get computed energies.
-	eval_rna_base_pair_energy_one_way( rna_raw_base_base_info, rsd1, rsd2, centroid1, centroid2, stub1, stub2 );
-	eval_rna_base_pair_energy_one_way( rna_raw_base_base_info, rsd2, rsd1, centroid2, centroid1, stub2, stub1 );
+	// A D:L pair is scored with both bases in the raw frame (see chemical::rna::base_stub_for_pair).
+	kinematics::Stub const pair_stub1( chemical::rna::base_stub_for_pair( stub1, rsd1, rsd2 ) );
+	kinematics::Stub const pair_stub2( chemical::rna::base_stub_for_pair( stub2, rsd2, rsd1 ) );
+	eval_rna_base_pair_energy_one_way( rna_raw_base_base_info, rsd1, rsd2, centroid1, centroid2, pair_stub1, pair_stub2 );
+	eval_rna_base_pair_energy_one_way( rna_raw_base_base_info, rsd2, rsd1, centroid2, centroid1, pair_stub2, pair_stub1 );
 }
 
 /////////////////////////////////////////////////////////////
@@ -1122,7 +1126,6 @@ RNA_LowResolutionPotential::eval_atom_derivative_base_base(
 	Matrix const & M_i( stub_i.M );
 	Vector const & x_i = M_i.col_x();
 	Vector const & y_i = M_i.col_y();
-	Vector const & z_i = M_i.col_z();
 
 	EnergyGraph const & energy_graph( pose.energies().energy_graph() );
 
@@ -1136,7 +1139,9 @@ RNA_LowResolutionPotential::eval_atom_derivative_base_base(
 		conformation::Residue const & res_j( pose.residue( j ) );
 
 		Vector const & centroid_j( base_centroids[j] );
-		kinematics::Stub const & stub_j( base_stubs[j] );
+		// A D:L pair is scored with both bases in the raw frame (see chemical::rna::base_stub_for_pair).
+		Vector const z_i = chemical::rna::base_stub_for_pair( stub_i, res_i, res_j ).M.col_z();
+		kinematics::Stub const stub_j( chemical::rna::base_stub_for_pair( base_stubs[j], res_j, res_i ) );
 
 		Matrix const & M_j( stub_j.M );
 		Vector const & x_j = M_j.col_x();
