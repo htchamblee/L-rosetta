@@ -354,6 +354,10 @@ RNA_TorsionPotential::get_f1_f2( core::id::TorsionID const & torsion_id, pose::P
 	} else {
 		return false;
 	}
+	// The potentials see tau = factor * theta. On the point-inverted coordinates above, f1 already
+	// comes out as the f1 of tau, but f2 has the wrong sign for L-RNA: d(tau)/dx = factor * d(theta)/dx.
+	// For D-RNA factor is 1 and this is an exact no-op.
+	f2 *= factor;
 
 	return true;
 }

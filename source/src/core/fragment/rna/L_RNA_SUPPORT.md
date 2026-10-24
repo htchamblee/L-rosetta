@@ -88,7 +88,7 @@ product, so reflecting a residue keeps the local x and y coordinates and negates
 ### Scoring (every RNA term that depends on handedness)
 | Term | Change |
 |---|---|
-| `rna_torsion` | already chirality-aware upstream (mixed D–L bonds score 0, with a warning) |
+| `rna_torsion` | energy already chirality-aware upstream (mixed D–L bonds score 0, with a warning); its atom derivative (`get_f1_f2`) had the wrong sign of f2 for L-RNA, which made the minimizer strain L sugars. Fixed |
 | `rna_sugar_close` | pucker classification uses the mirrored δ |
 | `rna_suite`, `suiteness_bonus` | L:L suites are scored on mirrored torsions, and derivatives are mirrored back. Mixed D:L suites are skipped |
 | `rna_jr_suite`, `RNA_SuiteName` | same rules as `rna_suite` |
