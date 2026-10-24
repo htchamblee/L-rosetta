@@ -193,7 +193,16 @@ names such as `g[LRGU]` or `3[LRGU]` also work.
 * χ restraints (syn/anti) give equal energies for D and the L mirror.
 
 Verified: all tests above pass in a release build, as do the existing `chemical`, `sequence`, `pose/rna`
-and `test_rna_sfxn` unit tests. A full `rna_denovo` run on a mixed D/L system has not been done yet.
+and `test_rna_sfxn` unit tests.
+
+### rna_denovo on a mixed D/L chain
+GCAA hairpin with a D stem and an L loop (`-sequence gggc3211gccu -secstruct "((((....))))"`, 200 decoys,
+same settings as below). All 200 runs finished, and every decoy has the intended handedness per residue. The
+O3'–P bonds at the D→L and L→D junctions have a median of 1.61 Å, the same as elsewhere in the chain (one decoy
+in 200 has 1.94 Å at a junction). Stem RMSD to the all-D native (residues 1–4, 9–12) has a median of 1.16 Å,
+against 1.11 Å for the all-D hairpin. The median score is −10.2, against −19.7 for all-D, mostly through less
+stacking and contact (`fa_stack` +3.6, `fa_atr` +2.6). That is expected: the mirrored loop cannot continue the D
+stem's stack, and the junction steps get no fragments, no base-pair-step chunks and no `rna_torsion` term.
 
 ### rna_denovo benchmark, D vs mirrored L
 Two hairpins, each folded from sequence as D and as the L mirror (200 decoys each, 3000 cycles,
