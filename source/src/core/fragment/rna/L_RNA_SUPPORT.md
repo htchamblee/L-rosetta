@@ -110,6 +110,8 @@ with `−z`, which is still a vector fixed to the base.
 * `core/chemical/PatchOperation.cc`:
   * the `L_RNA` patch now also mirrors proton-χ (2'-OH) samples, and sets `na_analogue` of each L
     type to its D counterpart (so code that identifies the base through `na_analogue()` works),
+  * `ChiralFlipAtoms` also mirrors the ICOORs of the residue connections (LOWER/UPPER) for RNA. They place the
+    neighbouring linking atom, and through it the phosphate oxygens and the cutpoint virtual atoms (OVL1/OVL2/OVU1).
   * `SET_ICOOR` negates the dihedral when it patches an L-RNA type. All RNA variant patches are
     written for D-RNA; without this the 5'-terminal phosphate (`LowerRNA`) and other patched atoms
     of L residues were built with D handedness.

@@ -41,6 +41,7 @@
 #include <ObjexxFCL/string.functions.hh>
 
 #include <core/chemical/MutableICoorRecord.hh> // AUTO IWYU For MutableICoorRecord
+#include <core/chemical/MutableResidueConnection.hh>
 
 
 #ifdef    SERIALIZATION
@@ -1745,6 +1746,18 @@ ChiralFlipAtoms::apply( MutableResidueType & rsd ) const {
 			icoor1->stub_atom2(),
 			icoor1->stub_atom3(),
 			true );
+	}
+
+	// RNA: also mirror the ICOORs of the residue connections (LOWER/UPPER). They place the neighbouring
+	// residue's linking atom and, through it, the phosphate oxygens and the cutpoint virtual atoms.
+	// (Not done for amino acids, whose D/L regression tests depend on the current behaviour.)
+	if ( rsd.is_d_rna() ) {
+		for ( Size c = 1; c <= rsd.n_possible_residue_connections(); ++c ) {
+			MutableResidueConnection & conn = rsd.residue_connection( c );
+			MutableICoorRecord const & ic = conn.icoor();
+			if ( ic.stub_atom1() == ic.stub_atom2() ) continue;
+			conn.icoor( MutableICoorRecord( -1.0 * ic.phi(), ic.theta(), ic.d(), ic.stub_atom1(), ic.stub_atom2(), ic.stub_atom3() ) );
+		}
 	}
 	rsd.fill_ideal_xyz_from_icoor();
 
