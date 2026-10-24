@@ -82,6 +82,8 @@ product, so reflecting a residue keeps the local x and y coordinates and negates
 ### Pucker and ideal geometry
 * `core/pose/rna/util.cc`: `assign_pucker()`, `apply_pucker()` (non-idealized branch), and
   `apply_ideal_c2endo_sugar_coords()` (mirrored torsions and sugar coordinates).
+* `core/pose/rna/util.cc` `position_cutpoint_phosphate_torsions()`: places the 3' residue's phosphate at a chain
+  break with a dummy residue of the same chirality and the mirrored A-form alpha (OP1/OP2 were swapped for L).
 * `core/pose/rna/RNA_IdealCoord.{hh,cc}`: L residues (`na_lra` etc.) get mirrored reference
   geometry. Pucker detection for `ANY_PUCKER` is chirality-aware.
 

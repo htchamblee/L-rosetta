@@ -659,7 +659,10 @@ position_cutpoint_phosphate_torsions( pose::Pose & current_pose,
 
 	static const ResidueTypeSetCOP rsd_set = current_pose.residue_type_set_for_pose( core::chemical::FULL_ATOM_t );
 
-	chemical::AA res_aa = chemical::na_rad; //aa_from_name( "RAD" );
+	// The dummy residue only supplies O3' (LOWER of the 3' residue); give it the 3' residue's chirality.
+	chemical::ResidueType const & three_prime_type = current_pose.residue_type( three_prime_chainbreak );
+	Real const chirality_factor = chemical::rna::rna_chirality_factor( three_prime_type );
+	chemical::AA res_aa = three_prime_type.is_l_rna() ? chemical::na_lra : chemical::na_rad; //aa_from_name( "RAD" );
 	ResidueOP new_rsd = conformation::ResidueFactory::create_residue( *( rsd_set->get_representative_type_aa( res_aa ) ) );
 
 	current_pose.prepend_polymer_residue_before_seqpos( *new_rsd, three_prime_chainbreak, true );
@@ -669,7 +672,8 @@ position_cutpoint_phosphate_torsions( pose::Pose & current_pose,
 	//so the manual setting below is actually not needed, May 24, 2010.. Parin S.
 	//These are the initial value of virtual upper and lower cutpoint atom.
 	//Actually only the alpha (id::BB, 1) is important here since it set the position of O3' (LOWER) atom which in turn determines  OP2 and OP1 atom
-	current_pose.set_torsion( TorsionID( three_prime_chainbreak + 1, id::BB, 1 ), -64.027359 );
+	// For L-RNA the A-form alpha is mirrored (chirality_factor = -1); without this OP1/OP2 come out swapped.
+	current_pose.set_torsion( TorsionID( three_prime_chainbreak + 1, id::BB, 1 ), chirality_factor * -64.027359 );
 	current_pose.delete_polymer_residue( three_prime_chainbreak );
 }
 
