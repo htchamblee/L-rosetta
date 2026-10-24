@@ -204,6 +204,22 @@ against 1.11 Å for the all-D hairpin. The median score is −10.2, against −1
 stacking and contact (`fa_stack` +3.6, `fa_atr` +2.6). That is expected: the mirrored loop cannot continue the D
 stem's stack, and the junction steps get no fragments, no base-pair-step chunks and no `rna_torsion` term.
 
+### rna_denovo on a two-strand D·L duplex
+Szabat 12-mer, D strand `agaaagagaaga` and L strand `424442424424`, parallel, with the 12 cis-WC pairs given as
+`-obligate_pair_explicit A:i B:i W W C` (heterochiral pairs cannot be written as dot-bracket). 100 decoys, 3000
+cycles. The mechanics work: every decoy has the intended handedness per residue and intact backbone bonds, and
+the pairs form (median 12/12; all 12 in 64 decoys). Mixed pairs get the D·D jump unchanged, which is right: the
+base and C1' are planar, so the D·D cWW transform gives the D·L cWW base geometry, and the flipped L sugar makes
+the strands parallel.
+
+The helix itself is not reproduced. Mean twist is about 0° (median −2.5°; 17 decoys below −10°, 12 above +10°),
+against −29° for the left-handed duplex that is stable in MD and +31° for the right-handed model. RMSD to those
+models: median 8.7 and 10.0 Å, best 3.7 and 3.1 Å. Likely reason: each strand takes its local statistics from a
+homochiral library. Fragments and `rna_torsion` drive the D strand toward a right-handed helix and the L strand
+toward a left-handed one, and the decoys settle in between. The score function does not favour the MD helix
+either: rescored, the left-handed model gives +38.8, against −4.0 to +44 (best to median) for the decoys. Use
+templates or restraints from MD for D·L interfaces instead of folding them de novo.
+
 ### rna_denovo benchmark, D vs mirrored L
 Two hairpins, each folded from sequence as D and as the L mirror (200 decoys each, 3000 cycles,
 `-minimize_rna`), with RMSD to the native or its mirror:
