@@ -29,6 +29,8 @@
 #include <core/kinematics/FoldTree.hh>
 #include <core/sequence/util.hh>
 #include <core/conformation/Residue.hh>
+#include <basic/options/option.hh>
+#include <basic/options/keys/rna.OptionKeys.gen.hh>
 
 // ObjexxFCL Headers
 #include <ObjexxFCL/FArray1D.hh>
@@ -551,13 +553,26 @@ RNA_ChunkLibrary::setup_base_pair_step_chunks(
 
 		if ( !base_pair_step_moving( base_pair_step, atom_level_domain_map_, pose ) ) continue;
 
+		// The library is D-RNA: an all-L step gets its mirror image, a mixed D/L step has no counterpart.
+		static bool const invert_for_l_rna = basic::options::option[ basic::options::OptionKeys::rna::denovo::invert_torsions_for_l_rna ]();
+		bool mirror_step( false );
+		if ( invert_for_l_rna && !core::pose::rna::base_pair_step_has_uniform_rna_chirality( base_pair_step, pose, mirror_step ) ) {
+			static bool warned_mixed_step( false );
+			if ( !warned_mixed_step ) {
+				TR.Warning << "Skipping base pair step " << base_pair_step.i() << "-" << base_pair_step.i_next() << "/" << base_pair_step.j() << "-" << base_pair_step.j_next() << ": it mixes D-RNA and L-RNA residues. Further skips are not reported." << std::endl;
+				warned_mixed_step = true;
+			}
+			continue;
+		}
+
 		ResMap res_map;
 		res_map[ base_pair_step.i()      ] = 1;
 		res_map[ base_pair_step.i_next() ] = 2;
 		res_map[ base_pair_step.j()      ] = 3;
 		res_map[ base_pair_step.j_next() ] = 4;
 
-		ChunkSetOP chunk_set( new ChunkSet( base_pair_step_library.mini_pose_list( base_pair_step_sequence ),
+		ChunkSetOP chunk_set( new ChunkSet( mirror_step ? base_pair_step_library.mirrored_mini_pose_list( base_pair_step_sequence ) :
+			base_pair_step_library.mini_pose_list( base_pair_step_sequence ),
 			*base_pair_step_library.scratch_pose( base_pair_step_sequence ),
 			res_map ) );
 		chunk_set->set_user_input( false );

@@ -41,6 +41,7 @@ D-RNA. So an L-RNA residue is handled as the mirror image of a D-RNA residue:
 | Backbone torsions α–ζ, χ, ν2, ν1, 2'-OH | negated (`rna_chirality_factor()` = −1) |
 | Non-main-chain sugar coordinates (C3'/C4'/C5' stub frame) | local `z` negated (`mirror_non_main_chain_sugar_coords()`) |
 | Base-pair jumps (`RNA_JumpMover`) | `M → F·M·F`, `t → F·t`, `F = diag(1,1,−1)` |
+| Base-pair-step chunks (`-bps_moves`) | library coordinates reflected (x → −x) for all-L steps; mixed D/L steps skipped |
 | Base coordinate frame used for scoring | `z` axis negated (`get_rna_base_coordinate_system_chirality_normalized()`) |
 | Ideal-geometry reference residues (`RNA_IdealCoord`) | mirrored copies (x → −x) of the D PDBs |
 
@@ -69,6 +70,14 @@ product, so reflecting a residue keeps the local x and y coordinates and negates
 ### Base-pair jumps
 * `core/import_pose/RNA_JumpMover.cc`: a jump drawn from the D-RNA jump library between two L-RNA
   residues is mirrored. This covers the initial pairings and later `random_jump_change` moves.
+
+### Base-pair steps
+* `core/import_pose/libraries/RNA_ChunkLibrary.cc` (`setup_base_pair_step_chunks`): a step whose four residues are
+  all L-RNA uses `BasePairStepLibrary::mirrored_mini_pose_list()`, the D library poses reflected through
+  `MiniPose::reflect_x()`. The chunk is inserted with `copy_dofs`, which takes every DOF from coordinates, so the
+  reflection negates all torsions and branch offsets and gives mirrored jumps, as for fragments and jumps.
+  A step that mixes D and L residues gets no chunk (one-time warning), and `RNA_DeNovoPoseInitializer` does not
+  force a cutpoint inside it. With `-rna:denovo:invert_torsions_for_l_rna false` the old behaviour returns.
 
 ### Pucker and ideal geometry
 * `core/pose/rna/util.cc`: `assign_pucker()`, `apply_pucker()` (non-idealized branch), and

@@ -2290,6 +2290,19 @@ base_pair_step_moving( core::pose::rna::BasePairStep const & base_pair_step,
 	return pair_moving;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////
+bool
+base_pair_step_has_uniform_rna_chirality( core::pose::rna::BasePairStep const & base_pair_step,
+	pose::Pose const & pose,
+	bool & is_l_rna )
+{
+	is_l_rna = pose.residue_type( base_pair_step.i() ).is_l_rna();
+	for ( Size const n : { base_pair_step.i_next(), base_pair_step.j(), base_pair_step.j_next() } ) {
+		if ( pose.residue_type( n ).is_l_rna() != is_l_rna ) return false;
+	}
+	return true;
+}
+
 /////////////////////////////////////////////////////////////////////////////////
 bool
 base_pair_moving( core::pose::rna::BasePair const & base_pair,

@@ -63,6 +63,9 @@ public:
 
 	utility::vector1< std::string > const & variant_types( Size const seq_num) const;
 
+	/// @brief Reflect every coordinate through the yz plane (x -> -x), giving the exact mirror image.
+	void reflect_x();
+
 private: //data
 	utility::vector1< utility::vector1< PointPosition > > coords_;
 	core::kinematics::FoldTree fold_tree_;

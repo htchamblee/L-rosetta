@@ -345,6 +345,13 @@ base_pair_step_moving( core::pose::rna::BasePairStep const & base_pair_step,
 	core::pose::toolbox::AtomLevelDomainMapCOP atom_level_domain_map,
 	core::pose::Pose const & pose );
 
+/// @brief True if the four residues of the step are all D-RNA or all L-RNA; is_l_rna tells which.
+/// @details The base pair step library is D-RNA. All-L steps get its mirror image; mixed steps have no counterpart.
+bool
+base_pair_step_has_uniform_rna_chirality( core::pose::rna::BasePairStep const & base_pair_step,
+	core::pose::Pose const & pose,
+	bool & is_l_rna );
+
 bool
 base_pair_moving( core::pose::rna::BasePair const & base_pair,
 	core::pose::toolbox::AtomLevelDomainMapCOP atom_level_domain_map,

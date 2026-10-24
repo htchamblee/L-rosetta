@@ -212,6 +212,22 @@ BasePairStepLibrary::mini_pose_list( BasePairStepSequence const & base_pair_step
 }
 
 //////////////////////////////////////////////////////////
+// Mirror images of the library poses, for all-L-RNA steps.
+utility::vector1< core::pose::MiniPoseOP > const &
+BasePairStepLibrary::mirrored_mini_pose_list( BasePairStepSequence const & base_pair_step_sequence ) const
+{
+	auto const it = mirrored_mini_pose_lists_.find( base_pair_step_sequence );
+	if ( it != mirrored_mini_pose_lists_.end() ) return it->second;
+	utility::vector1< core::pose::MiniPoseOP > mirrored;
+	for ( core::pose::MiniPoseOP const & mini_pose : mini_pose_list( base_pair_step_sequence ) ) {
+		core::pose::MiniPoseOP copy = utility::pointer::make_shared< core::pose::MiniPose >( *mini_pose );
+		copy->reflect_x();
+		mirrored.push_back( copy );
+	}
+	return ( mirrored_mini_pose_lists_[ base_pair_step_sequence ] = mirrored );
+}
+
+//////////////////////////////////////////////////////////
 // example of a full pose for each base pair step
 pose::PoseCOP const &
 BasePairStepLibrary::scratch_pose( BasePairStepSequence const & base_pair_step_sequence ) const

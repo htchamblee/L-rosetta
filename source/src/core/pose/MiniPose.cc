@@ -120,6 +120,13 @@ MiniPose::variant_types_list() const{
 	return variant_types_list_;
 }
 
+void
+MiniPose::reflect_x(){
+	for ( auto & rsd_coords : coords_ ) {
+		for ( PointPosition & xyz : rsd_coords ) xyz.x( -xyz.x() );
+	}
+}
+
 Size
 MiniPose::size() const {
 	return coords_.size();
