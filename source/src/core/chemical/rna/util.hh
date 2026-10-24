@@ -136,6 +136,14 @@ get_rna_base_coordinate_system_stub( core::conformation::Residue const & rsd );
 core::Real
 rna_chirality_factor( chemical::ResidueType const & rsd_type );
 
+/// @brief True for the L-RNA AA types (na_lra, na_lrc, na_lrg, na_lur).
+bool
+is_l_rna_aa( chemical::AA const aa );
+
+/// @brief The D-RNA AA of an L-RNA AA (na_lra -> na_rad, ...); any other AA is returned unchanged.
+chemical::AA
+rna_d_equivalent_aa( chemical::AA const aa );
+
 /// @brief Base coordinate system for scoring and classification.
 /// @details Identical to get_rna_base_coordinate_system() for D-RNA. For L-RNA the z axis is
 ///  negated, so a point's local coordinates match those of the mirror-image point around the

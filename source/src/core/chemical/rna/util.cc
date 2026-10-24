@@ -243,8 +243,26 @@ std::string const default_jump_atom( chemical::ResidueType const & rsd ) {
 
 ///////////////////////////////////////////////////////////////////////////////
 bool
-possibly_canonical( chemical::AA const & aa1,  chemical::AA const & aa2 ) {
+is_l_rna_aa( chemical::AA const aa ) {
 	using namespace core::chemical;
+	return ( aa == na_lra || aa == na_lrc || aa == na_lrg || aa == na_lur );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+chemical::AA
+rna_d_equivalent_aa( chemical::AA const aa ) {
+	return is_l_rna_aa( aa ) ? chemical::get_D_equivalent( aa ) : aa;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// An L:L pair is the mirror image of the D:D pair, so L-RNA AAs are mapped to D.
+// A heterochiral (D:L) pair is never canonical.
+bool
+possibly_canonical( chemical::AA const & aa1_in,  chemical::AA const & aa2_in ) {
+	using namespace core::chemical;
+	if ( is_l_rna_aa( aa1_in ) != is_l_rna_aa( aa2_in ) ) return false;
+	AA const aa1 = rna_d_equivalent_aa( aa1_in );
+	AA const aa2 = rna_d_equivalent_aa( aa2_in );
 	return ( ( aa1 == na_rgu && aa2 == na_rcy ) ||
 		( aa1 == na_rcy && aa2 == na_rgu ) ||
 		( aa1 == na_rgu && aa2 == na_ura ) ||
@@ -256,8 +274,11 @@ possibly_canonical( chemical::AA const & aa1,  chemical::AA const & aa2 ) {
 ///////////////////////////////////////////////////////////////////////////////
 //no G-U
 bool
-possibly_canonical_strict( chemical::AA const & aa1,  chemical::AA const & aa2 ) {
+possibly_canonical_strict( chemical::AA const & aa1_in,  chemical::AA const & aa2_in ) {
 	using namespace core::chemical;
+	if ( is_l_rna_aa( aa1_in ) != is_l_rna_aa( aa2_in ) ) return false;
+	AA const aa1 = rna_d_equivalent_aa( aa1_in );
+	AA const aa2 = rna_d_equivalent_aa( aa2_in );
 	return ( ( aa1 == na_rgu && aa2 == na_rcy ) ||
 		( aa1 == na_rcy && aa2 == na_rgu ) ||
 		( aa1 == na_rad && aa2 == na_ura ) ||
@@ -361,8 +382,11 @@ get_base_pair_atoms(
 	//AA const aa2 = rsd_type2.aa();// == aa_unk ? rsd_type2.na_analogue() : rsd_type2.aa();
 
 	// Enable base_analogue NOW and use PNA as an example
-	AA const aa1 = ( rsd_type1.aa() == aa_unk || rsd_type1.aa() == aa_unp ) ? rsd_type1.base_analogue() : rsd_type1.aa();
-	AA const aa2 = ( rsd_type2.aa() == aa_unk || rsd_type2.aa() == aa_unp ) ? rsd_type2.base_analogue() : rsd_type2.aa();
+	// L-RNA keeps the D atom names and the partner atoms are in-plane, so an L:L pair uses the D atoms.
+	// No atoms for a heterochiral (D:L) pair, as before (no data for those).
+	if ( rsd_type1.is_l_rna() != rsd_type2.is_l_rna() ) return;
+	AA const aa1 = rna_d_equivalent_aa( ( rsd_type1.aa() == aa_unk || rsd_type1.aa() == aa_unp ) ? rsd_type1.base_analogue() : rsd_type1.aa() );
+	AA const aa2 = rna_d_equivalent_aa( ( rsd_type2.aa() == aa_unk || rsd_type2.aa() == aa_unp ) ? rsd_type2.base_analogue() : rsd_type2.aa() );
 
 	if ( edge1 == WATSON_CRICK && edge2 == WATSON_CRICK ) {
 		if ( orientation == CIS ) {

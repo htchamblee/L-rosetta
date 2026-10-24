@@ -95,6 +95,7 @@ product, so reflecting a residue keeps the local x and y coordinates and negates
 | `fa_stack`, `stack_elec` | use chirality-normalized base frames |
 | low-res `rna_base_pair`, `rna_base_axis`, `rna_base_stagger`, `rna_base_stack`, `rna_base_stack_axis`, `rna_base_backbone`, and the DMS low-res potential | use chirality-normalized base frames (through `RNA_CentroidInfo::base_stubs()`) |
 | Base-pair classification (`RNA_BasePairClassifier`) | uses `base_stubs()`, so L:L edges and cis/trans are assigned like their D mirror |
+| Canonical-pair identity (`possibly_canonical`, `possibly_canonical_strict`, `get_base_pair_atoms` in `core/chemical/rna/util.cc`) | L-RNA AAs are mapped to D (`rna_d_equivalent_aa`), so L:L pairs count as Watson–Crick (N_WC, natWC, rms_stem), helical fragments are picked for L stems, and base-pair constraints get their H-bond atoms. A D:L pair is never canonical and gets no atom-pair constraints |
 | `fa_atr`, `fa_rep`, `fa_intra_rep`, `lk_nonpolar`, `geom_sol*`, `hbond_*`, `fa_elec*`, `rna_vdw`, `rna_rg`, `ch_bond` | depend only on distances and angles, so they are mirror-invariant and need no change |
 | `ref` | already maps `na_lra` etc. to the D reference energies |
 
