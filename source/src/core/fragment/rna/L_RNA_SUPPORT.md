@@ -117,6 +117,9 @@ with `−z`, which is still a vector fixed to the base.
     of L residues were built with D handedness.
 * `core/chemical/AA.cc`: `1`–`4` parse to the L-RNA AA types (for `make_pose_from_sequence`), and
   AA names `LRA`, `LRC`, `LRG`, `LUR` exist for params files.
+* `core/pose/annotated_sequence.cc` (`residue_types_from_sequence`): an L-RNA residue given by name (as the 1-4
+  shorthand produces) at a chain end gets the LowerRNA/UpperRNA terminus variant, like a plain one-letter D residue.
+  Other named residue types are taken literally, as before.
 * `core/sequence/util.{hh,cc}`: `expand_l_rna_shorthand()`, applied in
   `parse_out_non_standard_residues()` (the `-sequence` / FASTA path used by rna_denovo).
 
