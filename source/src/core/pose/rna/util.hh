@@ -358,6 +358,15 @@ base_pair_step_has_uniform_rna_chirality( core::pose::rna::BasePairStep const & 
 	core::pose::Pose const & pose,
 	bool & is_l_rna );
 
+/// @brief True for a parallel step whose two strands each have uniform chirality, opposite to each other (a
+///  heterochiral D/L duplex step). first_strand_is_l tells whether strand (i, i_next) is the L one.
+/// @details The heterochiral step library stores the D strand first, so a step with the L strand first gets
+///  the mirror image.
+bool
+base_pair_step_is_parallel_heterochiral( core::pose::rna::BasePairStep const & base_pair_step,
+	core::pose::Pose const & pose,
+	bool & first_strand_is_l );
+
 bool
 base_pair_moving( core::pose::rna::BasePair const & base_pair,
 	core::pose::toolbox::AtomLevelDomainMapCOP atom_level_domain_map,

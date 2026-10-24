@@ -49,6 +49,9 @@
 #include <core/chemical/ChemicalManager.hh>
 #include <core/import_pose/import_pose.hh>
 #include <utility/string_util.hh>
+#include <core/import_pose/RNA_BasePairHandler.hh>
+#include <core/import_pose/RNA_DeNovoParameters.hh>
+#include <core/import_pose/libraries/RNA_LibraryManager.hh>
 #include <numeric/xyzMatrix.hh>
 #include <core/pose/rna/BasePair.hh>
 #include <core/pose/rna/RNA_BasePairClassifier.hh>
@@ -517,6 +520,47 @@ public:
 			TS_ASSERT_EQUALS( mixed_pairs[ k ].orientation(), d_pairs[ k ].orientation() );
 			TS_ASSERT_EQUALS( mixed_pairs[ k ].LW_orientation(), d_pairs[ k ].LW_orientation() );
 		}
+	}
+
+	// A parallel D/L Watson-Crick duplex (pairs i.j and i+1.j+1) gives parallel base pair steps, which are used only
+	// for heterochiral strands and come from the heterochiral step library (D strand first).
+	void test_parallel_heterochiral_base_pair_steps() {
+		using namespace core::import_pose;
+		using namespace core::import_pose::libraries;
+		using core::pose::rna::BasePair;
+		using core::pose::rna::BasePairStep;
+
+		RNA_DeNovoParameters params;
+		core::pose::rna::RNA_BasePairList pairs;
+		for ( Size const i : { 1, 2, 3 } ) pairs.push_back( BasePair( i, i + 3, WATSON_CRICK, WATSON_CRICK, ANTIPARALLEL ) );
+		params.set_rna_pairing_list( pairs );
+		utility::vector1< BasePairStep > const steps = RNA_BasePairHandler( params ).get_canonical_base_pair_steps();
+		TS_ASSERT_EQUALS( steps.size(), 2 );
+		for ( BasePairStep const & step : steps ) TS_ASSERT( step.parallel() );
+		TS_ASSERT( steps.has_value( BasePairStep( 1, 2, 4, 5, true ) ) );
+		TS_ASSERT( steps.has_value( BasePairStep( 2, 3, 5, 6, true ) ) );
+
+		pose::Pose mixed_pose, d_pose;
+		pose::make_pose_from_sequence( mixed_pose, "gaa424", "fa_standard" );
+		pose::make_pose_from_sequence( d_pose, "gaacuu", "fa_standard" );
+		bool first_strand_is_l( true );
+		TS_ASSERT( pose::rna::base_pair_step_is_parallel_heterochiral( BasePairStep( 1, 2, 4, 5, true ), mixed_pose, first_strand_is_l ) );
+		TS_ASSERT( !first_strand_is_l );
+		TS_ASSERT( pose::rna::base_pair_step_is_parallel_heterochiral( BasePairStep( 4, 5, 1, 2, true ), mixed_pose, first_strand_is_l ) );
+		TS_ASSERT( first_strand_is_l );
+		TS_ASSERT( !pose::rna::base_pair_step_is_parallel_heterochiral( BasePairStep( 1, 2, 4, 5, true ), d_pose, first_strand_is_l ) );
+		TS_ASSERT( !pose::rna::base_pair_step_is_parallel_heterochiral( BasePairStep( 1, 2, 5, 6 ), mixed_pose, first_strand_is_l ) );
+
+		BasePairStepLibrary const & library = RNA_LibraryManager::get_instance()->canonical_base_pair_step_library();
+		BasePairStepSequence const ga_cu( 'g', 'a', 'c', 'u', 0, true );
+		TS_ASSERT( library.has_value( ga_cu ) );
+		TS_ASSERT( library.mini_pose_list( ga_cu ).size() > 100 );
+		pose::Pose const & scratch = *library.scratch_pose( ga_cu );
+		TS_ASSERT( !scratch.residue_type( 1 ).is_l_rna() && !scratch.residue_type( 2 ).is_l_rna() );
+		TS_ASSERT( scratch.residue_type( 3 ).is_l_rna() && scratch.residue_type( 4 ).is_l_rna() );
+		TS_ASSERT( scratch.residue_type( 1 ).is_RNA() && scratch.residue( 1 ).has( "O2'" ) );
+		TS_ASSERT( !library.has_value( BasePairStepSequence( 'a', 'u', 'u', 'a', 0, true ) ) ); // not in the library
+		TS_ASSERT( library.has_value( BasePairStepSequence( 'g', 'a', 'u', 'c' ) ) ); // the antiparallel library is unchanged
 	}
 
 };

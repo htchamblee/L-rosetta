@@ -45,7 +45,8 @@ public:
 #endif
 
 	//constructor
-	BasePairStepSequence( char const nt_i, char const nt_i_next, char const nt_j, char const nt_j_next, core::Size const num_bulge = 0 );
+	BasePairStepSequence( char const nt_i, char const nt_i_next, char const nt_j, char const nt_j_next, core::Size const num_bulge = 0,
+		bool const parallel = false );
 
 	BasePairStepSequence( std::string const & sequence, core::Size const i, core::Size const i_next, core::Size const j, core::Size const j_next );
 
@@ -72,6 +73,8 @@ public:
 					} else if  ( lhs.base_pair_step_sequence_.second.second == rhs.base_pair_step_sequence_.second.second ) {
 						if ( lhs.num_bulge_ < rhs.num_bulge_ ) {
 							return true;
+						} else if ( lhs.num_bulge_ == rhs.num_bulge_ ) {
+							return lhs.parallel_ < rhs.parallel_;
 						}
 					}
 				}
@@ -102,11 +105,16 @@ public:
 	int const &
 	num_bulge() const { return num_bulge_; }
 
+	/// @brief Parallel step (pairs i.j and i_next.j_next): heterochiral D/L steps, stored with the D strand first.
+	bool
+	parallel() const { return parallel_; }
+
 private:
 
 	typedef std::pair< char, char > DinucleotideStrandSequence;
 	std::pair< DinucleotideStrandSequence, DinucleotideStrandSequence > base_pair_step_sequence_;
 	int num_bulge_;
+	bool parallel_ = false;
 
 };
 

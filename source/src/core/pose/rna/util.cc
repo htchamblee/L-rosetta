@@ -2329,6 +2329,19 @@ base_pair_step_has_uniform_rna_chirality( core::pose::rna::BasePairStep const & 
 	return true;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////
+bool
+base_pair_step_is_parallel_heterochiral( core::pose::rna::BasePairStep const & base_pair_step,
+	pose::Pose const & pose,
+	bool & first_strand_is_l )
+{
+	if ( !base_pair_step.parallel() ) return false;
+	first_strand_is_l = pose.residue_type( base_pair_step.i() ).is_l_rna();
+	return pose.residue_type( base_pair_step.i_next() ).is_l_rna() == first_strand_is_l &&
+		pose.residue_type( base_pair_step.j() ).is_l_rna() != first_strand_is_l &&
+		pose.residue_type( base_pair_step.j_next() ).is_l_rna() != first_strand_is_l;
+}
+
 /////////////////////////////////////////////////////////////////////////////////
 bool
 base_pair_moving( core::pose::rna::BasePair const & base_pair,

@@ -230,6 +230,17 @@ RNA_BasePairHandler::get_base_pair_steps( bool const just_canonical ) const {
 		}
 	}
 
+	// Parallel steps: pairs i.j and (i+1).(j+1), as in a heterochiral D/L Watson-Crick duplex. Listed once (i < j).
+	// Callers use them only for heterochiral strands (see core::pose::rna::base_pair_step_is_parallel_heterochiral).
+	for ( auto const & elem : partner ) {
+		Size const i = elem.first;
+		Size const j = elem.second;
+		if ( j <= i + 1 ) continue;
+		if ( partner.find( i+1 ) == partner.end() || partner[ i+1 ] != j+1 ) continue;
+		if ( cutpoints_open_.has_value( i ) || cutpoints_open_.has_value( j ) ) continue;
+		base_pair_steps.push_back( BasePairStep( i, i+1, j, j+1, true /*parallel*/ ) );
+	}
+
 	return base_pair_steps;
 }
 

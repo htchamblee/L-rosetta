@@ -43,11 +43,13 @@ BasePairStepSequence::BasePairStepSequence( char const nt_i,
 	char const nt_i_next,
 	char const nt_j,
 	char const nt_j_next,
-	Size num_bulge /* = 0 */){
+	Size num_bulge /* = 0 */,
+	bool const parallel /* = false */ ){
 	base_pair_step_sequence_ = std::make_pair(
 		std::make_pair( nt_i, nt_i_next ),
 		std::make_pair( nt_j, nt_j_next ) );
 	num_bulge_ = num_bulge;
+	parallel_ = parallel;
 }
 
 //constructor
@@ -70,12 +72,14 @@ BasePairStepSequence::BasePairStepSequence( std::string const & sequence,
 		sequence[ base_pair_step.j_next() - 1 ] ) );
 	runtime_assert( base_pair_step.j_next() > base_pair_step.j() );
 	num_bulge_ = base_pair_step.j_next()  - base_pair_step.j() - 1;
+	parallel_ = base_pair_step.parallel();
 }
 
 //////////////
 std::string
 BasePairStepSequence::subdir() const
 {
+	if ( parallel_ ) return "heterochiral_parallel/";
 	if ( num_bulge_ == 0 ) {
 		return "standard/";
 	} else if ( num_bulge_ >= 1 && num_bulge_ <= (MAX_BULGE_LENGTH) ) {
@@ -125,6 +129,17 @@ BasePairStepLibrary::initialize(){
 				char nt_j      = rna_base_pairs[n][1];
 				char nt_j_next = rna_base_pairs[m][1];
 				BasePairStepSequence base_pair_step_sequence( nt_i, nt_i_next, nt_j, nt_j_next, q );
+				initialize_data( base_pair_step_sequence, false /* lazy loading when actually needed*/ );
+			}
+		}
+	}
+
+	// Parallel heterochiral D/L steps (D strand first). Only some sequences have files; the others stay unregistered.
+	if ( canonical_ ) {
+		for ( Size m = 1; m <= rna_base_pairs.size(); m++ ) {
+			for ( Size n = 1; n <= rna_base_pairs.size(); n++ ) {
+				BasePairStepSequence base_pair_step_sequence( rna_base_pairs[m][0], rna_base_pairs[n][0],
+					rna_base_pairs[m][1], rna_base_pairs[n][1], 0, true /*parallel*/ );
 				initialize_data( base_pair_step_sequence, false /* lazy loading when actually needed*/ );
 			}
 		}
@@ -244,6 +259,7 @@ operator <<( std::ostream & os, BasePairStepSequence const & bps ){
 	os << bps.base_pair_step_sequence_.second.first;
 	for ( core::Size n = 1; n <= core::Size(bps.num_bulge_); n++ ) os << "-n";
 	os << "-" << bps.base_pair_step_sequence_.second.second;
+	if ( bps.parallel_ ) os << " (parallel)";
 	return os;
 }
 

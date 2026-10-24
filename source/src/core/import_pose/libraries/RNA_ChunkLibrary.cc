@@ -546,7 +546,17 @@ RNA_ChunkLibrary::setup_base_pair_step_chunks(
 	for ( BasePairStep const & base_pair_step : base_pair_steps ) {
 
 		BasePairStepSequence base_pair_step_sequence( pose.sequence(), base_pair_step );
-		if ( !check_base_pair_step_availability( base_pair_step_library, base_pair_step_sequence ) ) continue;
+		static bool const invert_for_l_rna = basic::options::option[ basic::options::OptionKeys::rna::denovo::invert_torsions_for_l_rna ]();
+		bool mirror_step( false );
+		if ( base_pair_step.parallel() ) {
+			// Parallel steps come only from the heterochiral D/L library (D strand first), and only some sequences
+			// are in it. An L strand first gets the mirror image.
+			if ( !invert_for_l_rna || !core::pose::rna::base_pair_step_is_parallel_heterochiral( base_pair_step, pose, mirror_step ) ) continue;
+			if ( !base_pair_step_library.has_value( base_pair_step_sequence ) ) {
+				TR << "No heterochiral parallel base pair step in the library for " << base_pair_step << " (" << base_pair_step_sequence.tag() << "), so just fragments there." << std::endl;
+				continue;
+			}
+		} else if ( !check_base_pair_step_availability( base_pair_step_library, base_pair_step_sequence ) ) continue;
 
 		// happens if poses in the silent file in the database get filtered out.
 		if ( base_pair_step_library.mini_pose_list( base_pair_step_sequence ).size() == 0 ) return;
@@ -554,9 +564,8 @@ RNA_ChunkLibrary::setup_base_pair_step_chunks(
 		if ( !base_pair_step_moving( base_pair_step, atom_level_domain_map_, pose ) ) continue;
 
 		// The library is D-RNA: an all-L step gets its mirror image, a mixed D/L step has no counterpart.
-		static bool const invert_for_l_rna = basic::options::option[ basic::options::OptionKeys::rna::denovo::invert_torsions_for_l_rna ]();
-		bool mirror_step( false );
-		if ( invert_for_l_rna && !core::pose::rna::base_pair_step_has_uniform_rna_chirality( base_pair_step, pose, mirror_step ) ) {
+		if ( !base_pair_step.parallel() && invert_for_l_rna &&
+				!core::pose::rna::base_pair_step_has_uniform_rna_chirality( base_pair_step, pose, mirror_step ) ) {
 			static bool warned_mixed_step( false );
 			if ( !warned_mixed_step ) {
 				TR.Warning << "Skipping base pair step " << base_pair_step.i() << "-" << base_pair_step.i_next() << "/" << base_pair_step.j() << "-" << base_pair_step.j_next() << ": it mixes D-RNA and L-RNA residues. Further skips are not reported." << std::endl;
