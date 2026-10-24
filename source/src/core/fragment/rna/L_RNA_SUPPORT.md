@@ -236,6 +236,14 @@ takes its fragments, `rna_torsion` and low-res stacking statistics from homochir
 D strand toward right-handed and the L strand toward left-handed. Mixed steps also get no base-pair-step chunks.
 Sampling, not full-atom scoring, is what has to change for heterochiral helices.
 
+**With the heterochiral step library** (`base_pair_steps/canonical/heterochiral_parallel/`, from the 300 ns
+left-handed MD run), the same 100-decoy test gives left-handed helices throughout. All 100 decoys have all 12
+pairs, with median twist −20° (MD: −21°) and none above 0°. Scores run from −22.5 (best) to −5.5 (median), and
+the best beats the minimized MD helix (−12.2). Against 30 MD frames (core residues 2–11 and 14–23, heavy atoms),
+the median decoy is 1.34 Å from its closest frame, 81 decoys are under 2 Å, and the top five by score are
+1.1–1.3 Å. MD frames differ from each other by a median of 2.35 Å. This test is circular, because the library
+comes from MD of this same duplex. It shows that the machinery works, not that a new D·L helix can be predicted.
+
 ### rna_denovo benchmark, D vs mirrored L
 Two hairpins, each folded from sequence as D and as the L mirror (200 decoys each, 3000 cycles,
 `-minimize_rna`), with RMSD to the native or its mirror:
