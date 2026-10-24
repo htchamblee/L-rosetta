@@ -184,7 +184,28 @@ names such as `g[LRGU]` or `3[LRGU]` also work.
 * puckers, C2'-endo ideal geometry and `RNA_IdealCoord` agree between D and mirrored L,
 * fragment insertion negates torsions for L, leaves D untouched, and skips mixed windows,
 * every hi-res (`rna_res_level_energy4` + suite terms) and low-res (`rna_lores`) score term is equal
-  for a D pose and its L mirror.
+  for a D pose and its L mirror,
+* `rna_torsion` atom derivatives of L match those of the D mirror, also across a D–L junction,
+* base-pair-step chunks are mirrored for all-L steps and skipped for mixed steps,
+* L·L Watson–Crick pairs count as canonical and heterochiral pairs do not,
+* cutpoint variant atoms (OVL1/OVL2/OVU1) and the phosphate after a chain break are exact mirrors,
+* named L-RNA residues at chain ends get terminus variants,
+* χ restraints (syn/anti) give equal energies for D and the L mirror.
 
 Verified: all tests above pass in a release build, as do the existing `chemical`, `sequence`, `pose/rna`
 and `test_rna_sfxn` unit tests. A full `rna_denovo` run on a mixed D/L system has not been done yet.
+
+### rna_denovo benchmark, D vs mirrored L
+Two hairpins, each folded from sequence as D and as the L mirror (200 decoys each, 3000 cycles,
+`-minimize_rna`), with RMSD to the native or its mirror:
+
+| target | | best score | median score | median RMSD (Å) | decoys < 2 Å | RMSD of top-scoring decoy |
+|---|---|---|---|---|---|---|
+| GCAA hairpin (12 nt) | D | −24.1 | −19.7 | 1.83 | 59% | 1.98 |
+| | L | −24.4 | −19.1 | 1.77 | 68% | 1.78 |
+| UUCG hairpin (14 nt) | D | −23.7 | −15.7 | 2.73 | 7% | 2.86 |
+| | L | −26.9 | −15.5 | 2.68 | 11% | 3.51 |
+
+Two-sample KS tests find no D/L difference in score (p = 0.26, 0.53) or RMSD (p = 0.26, 0.17). Individual
+decoys differ because a Monte Carlo step whose energy change is ~1e-13 can be accepted in one handedness and
+rejected in the other; with such steps treated as zero, D and L follow the same trajectory.
