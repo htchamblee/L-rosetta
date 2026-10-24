@@ -221,13 +221,20 @@ the pairs form (median 12/12; all 12 in 64 decoys). Mixed pairs get the D·D jum
 base and C1' are planar, so the D·D cWW transform gives the D·L cWW base geometry, and the flipped L sugar makes
 the strands parallel.
 
-The helix itself is not reproduced. Mean twist is about 0° (median −2.5°; 17 decoys below −10°, 12 above +10°),
-against −29° for the left-handed duplex that is stable in MD and +31° for the right-handed model. RMSD to those
-models: median 8.7 and 10.0 Å, best 3.7 and 3.1 Å. Likely reason: each strand takes its local statistics from a
-homochiral library. Fragments and `rna_torsion` drive the D strand toward a right-handed helix and the L strand
-toward a left-handed one, and the decoys settle in between. The score function does not favour the MD helix
-either: rescored, the left-handed model gives +38.8, against −4.0 to +44 (best to median) for the decoys. Use
-templates or restraints from MD for D·L interfaces instead of folding them de novo.
+The helix itself is not reproduced. Before the D:L base-pair fix (`base_stub_for_pair()`), mean twist was
+about 0° (median −2.5°) against −29° for the left-handed duplex that is stable in MD and +31° for the
+right-handed model, and RMSD to those models had medians of 8.7 and 10.0 Å. After the fix the distribution is
+much the same (median twist 0°, median RMSD 9.5 Å to either model, all 12 pairs in 71 decoys). The best-scoring
+decoys now lean left-handed, though: the top four have negative twist, and the second best is at −27° and 3.2 Å
+from the left-handed model.
+
+The full-atom score is not the obstacle. Minimized in Rosetta with the same weights, the left-handed MD helix
+keeps its twist (−34°) and all 12 pairs and scores −12.2. That beats the right-handed model (−4.9) and every
+decoy (best −6.7). The low-res stage, where the fold is set, still prefers other structures: −152 for the
+minimized left-handed helix, −161 for the right-handed model, and down to −168 for untwisted decoys. Each strand
+takes its fragments, `rna_torsion` and low-res stacking statistics from homochiral RNA, so the sampling pulls the
+D strand toward right-handed and the L strand toward left-handed. Mixed steps also get no base-pair-step chunks.
+Sampling, not full-atom scoring, is what has to change for heterochiral helices.
 
 ### rna_denovo benchmark, D vs mirrored L
 Two hairpins, each folded from sequence as D and as the L mirror (200 decoys each, 3000 cycles,
