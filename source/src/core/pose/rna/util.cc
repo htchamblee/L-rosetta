@@ -1637,6 +1637,30 @@ add_chi_constraints( pose::Pose & pose,
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
+// Chi restraints are defined for D-RNA. For L-RNA residues the angle is mirrored (chi -> -chi), which on the
+// 36-node circular spline (nodes at 5, 15, ..., 355 degrees) maps node q onto node 37-q.
+void
+add_chi_constraints_d_and_l( pose::Pose & pose,
+	utility::vector1< Real > const & energies,
+	utility::vector1< Size > const & rna_chi_res )
+{
+	using namespace core::scoring::func;
+	using namespace core::pose::full_model_info;
+	utility::vector1< Size > const & res_list = const_full_model_info( pose ).res_list();
+	utility::vector1< Size > d_res, l_res;
+	for ( Size const n : rna_chi_res ) {
+		if ( res_list.has_value( n ) && pose.residue_type( res_list.index( n ) ).is_l_rna() ) l_res.push_back( n );
+		else d_res.push_back( n );
+	}
+	if ( !d_res.empty() ) add_chi_constraints( pose, utility::pointer::make_shared< CircularSplineFunc >( 1.0, energies, true /*convert_to_degrees*/ ), d_res );
+	if ( !l_res.empty() ) {
+		utility::vector1< Real > energies_l( energies.size() );
+		for ( Size q = 1; q <= energies.size(); ++q ) energies_l[ q ] = energies[ energies.size() + 1 - q ];
+		add_chi_constraints( pose, utility::pointer::make_shared< CircularSplineFunc >( 1.0, energies_l, true /*convert_to_degrees*/ ), l_res );
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
 void
 add_syn_chi_constraints( core::pose::Pose & pose ) {
 	using namespace core::scoring::func;
@@ -1646,8 +1670,7 @@ add_syn_chi_constraints( core::pose::Pose & pose ) {
 	utility::vector1< Real > energies( 36, 20.0 ); // spaced at 5, 10, ... 355 degrees. Set penalty to be +20.0
 	// zero out function at permissible vals. (syn should be -120.0 to 0.0 --> 240.0 to 360.0)
 	for ( Size q = 24; q <= 36; q++ ) energies[ q ] = 0.0;
-	FuncOP chi_potential_syn_restraint( new CircularSplineFunc( 1.0, energies, true /*convert_to_degrees*/ ) );
-	add_chi_constraints( pose, chi_potential_syn_restraint, const_full_model_info( pose ).rna_syn_chi_res() );
+	add_chi_constraints_d_and_l( pose, energies, const_full_model_info( pose ).rna_syn_chi_res() );
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1660,8 +1683,7 @@ add_anti_chi_constraints( core::pose::Pose & pose ) {
 	utility::vector1< Real > energies( 36, 20.0 ); // spaced at 5, 10, ... 355 degrees. Set penalty to be +20.0
 	// zero out function at permissible vals. (anti should be 0.0 to 120.0)
 	for ( Size q = 1; q <= 12; q++ ) energies[ q ] = 0.0;
-	FuncOP chi_potential_anti_restraint( new CircularSplineFunc( 1.0, energies, true /*convert_to_degrees*/ ) );
-	add_chi_constraints( pose, chi_potential_anti_restraint, const_full_model_info( pose ).rna_anti_chi_res() );
+	add_chi_constraints_d_and_l( pose, energies, const_full_model_info( pose ).rna_anti_chi_res() );
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

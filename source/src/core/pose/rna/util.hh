@@ -250,6 +250,12 @@ add_chi_constraints( pose::Pose & pose,
 	core::scoring::func::FuncOP chi_potential_restraint,
 	utility::vector1< Size > const & rna_chi_res );
 
+/// @brief add_chi_constraints() with the spline energies of a D-RNA restraint; L-RNA residues get the mirrored table.
+void
+add_chi_constraints_d_and_l( pose::Pose & pose,
+	utility::vector1< Real > const & energies,
+	utility::vector1< Size > const & rna_chi_res );
+
 void
 add_syn_chi_constraints( core::pose::Pose & pose );
 

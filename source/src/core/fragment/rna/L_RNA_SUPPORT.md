@@ -92,6 +92,7 @@ product, so reflecting a residue keeps the local x and y coordinates and negates
 |---|---|
 | `rna_torsion` | energy already chirality-aware upstream (mixed D–L bonds score 0, with a warning); its atom derivative (`get_f1_f2`) had the wrong sign of f2 for L-RNA, which made the minimizer strain L sugars. Fixed |
 | `rna_sugar_close` | pucker classification uses the mirrored δ |
+| syn/anti χ restraints (`add_syn_chi_constraints`, `add_anti_chi_constraints`) | L residues get the mirrored spline table (node q ↔ 37−q) |
 | `rna_suite`, `suiteness_bonus` | L:L suites are scored on mirrored torsions, and derivatives are mirrored back. Mixed D:L suites are skipped |
 | `rna_jr_suite`, `RNA_SuiteName` | same rules as `rna_suite` |
 | `fa_stack`, `stack_elec` | use chirality-normalized base frames |
@@ -132,7 +133,7 @@ with `−z`, which is still a vector fixed to the base.
 ## Limitations (still D-only or unsupported)
 
 * **Mixed D–L covalent steps.** A D residue bonded to an L residue in the same chain gets no
-  fragments across the junction, no `rna_torsion`/`rna_suite` score for that step, and no
+  fragments across the junction, no `rna_torsion`/`rna_suite` score or `rna_torsion` derivative for that step, and no
   suite name. Put D and L strands in separate chains.
 * **Heterochiral (D:L) base pairs or stacks.** No data exists for these. Low-res base-pair and stacking
   terms score them with the normalized frames, which is arbitrary. Jumps between a D and an L residue
