@@ -121,6 +121,11 @@ with `−z`, which is still a vector fixed to the base.
 * `core/pose/annotated_sequence.cc` (`residue_types_from_sequence`): an L-RNA residue given by name (as the 1-4
   shorthand produces) at a chain end gets the LowerRNA/UpperRNA terminus variant, like a plain one-letter D residue.
   Other named residue types are taken literally, as before.
+* `database/.../patches/nucleic/rna/{VirtualBase,VirtualBaseHeavyAtom,BulgeRNA,Virtual_RNA_Residue_Exclude_Phosphate}.txt`:
+  the `AA` selectors also list `LRA LRC LRG LUR`. These patches only change atom types (virtualization), so they
+  apply to L unchanged. Without this, rna_denovo stopped on loops it virtualizes (e.g. the UUCG tetraloop).
+  Patches that add atoms (BlockStack, Deoxy_O2prime, triphosphate, cyclic phosphate, 7-deaza, protonated
+  variants) are still D-only.
 * `core/sequence/util.{hh,cc}`: `expand_l_rna_shorthand()`, applied in
   `parse_out_non_standard_residues()` (the `-sequence` / FASTA path used by rna_denovo).
 
