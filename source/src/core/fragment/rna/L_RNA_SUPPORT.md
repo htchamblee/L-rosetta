@@ -95,12 +95,19 @@ product, so reflecting a residue keeps the local x and y coordinates and negates
 | syn/anti χ restraints (`add_syn_chi_constraints`, `add_anti_chi_constraints`) | L residues get the mirrored spline table (node q ↔ 37−q) |
 | `rna_suite`, `suiteness_bonus` | L:L suites are scored on mirrored torsions, and derivatives are mirrored back. Mixed D:L suites are skipped |
 | `rna_jr_suite`, `RNA_SuiteName` | same rules as `rna_suite` |
-| `fa_stack`, `stack_elec` | use chirality-normalized base frames |
-| low-res `rna_base_pair`, `rna_base_axis`, `rna_base_stagger`, `rna_base_stack`, `rna_base_stack_axis`, `rna_base_backbone`, and the DMS low-res potential | use chirality-normalized base frames (through `RNA_CentroidInfo::base_stubs()`) |
-| Base-pair classification (`RNA_BasePairClassifier`) | uses `base_stubs()`, so L:L edges and cis/trans are assigned like their D mirror |
+| `fa_stack`, `stack_elec` | use chirality-normalized base frames. They depend only on cos² of the angle to the base normal, so D:L pairs need no special handling |
+| low-res `rna_base_pair`, `rna_base_axis`, `rna_base_stagger`, `rna_base_stack`, `rna_base_stack_axis`, `rna_base_backbone`, and the DMS low-res potential | use chirality-normalized base frames (through `RNA_CentroidInfo::base_stubs()`). For a D:L pair the base-base terms (not `rna_base_backbone` or DMS) use the raw frame for both bases (`base_stub_for_pair()`, below) |
+| Base-pair classification (`RNA_BasePairClassifier`) | uses `base_stubs()`, so L:L edges and cis/trans are assigned like their D mirror. D:L pairs use `base_stub_for_pair()` |
 | Canonical-pair identity (`possibly_canonical`, `possibly_canonical_strict`, `get_base_pair_atoms` in `core/chemical/rna/util.cc`) | L-RNA AAs are mapped to D (`rna_d_equivalent_aa`), so L:L pairs count as Watson–Crick (N_WC, natWC, rms_stem), helical fragments are picked for L stems, and base-pair constraints get their H-bond atoms. A D:L pair is never canonical and gets no atom-pair constraints |
 | `fa_atr`, `fa_rep`, `fa_intra_rep`, `lk_nonpolar`, `geom_sol*`, `hbond_*`, `fa_elec*`, `rna_vdw`, `rna_rg`, `ch_bond` | depend only on distances and angles, so they are mirror-invariant and need no change |
 | `ref` | already maps `na_lra` etc. to the D reference energies |
+
+**D:L base pairs.** Bases are planar, so a base's raw frame depends only on its own atoms, not on sugar chirality.
+A D:L pair with the same base coordinates as a D:D pair is therefore physically the same base–base arrangement.
+Normalizing only the L residue would score it as if one base were flipped over (cis read as trans). So
+`core::chemical::rna::base_stub_for_pair()` gives both bases of a D:L pair the raw frame, and the D:D statistics
+apply. The base–backbone term and the DMS potential involve the partner's chiral backbone; D:D statistics have no
+counterpart for that, and they are left unchanged.
 
 The derivatives of the frame-based terms stay consistent: the normalized frame only replaces `z`
 with `−z`, which is still a vector fixed to the base.
@@ -191,6 +198,8 @@ names such as `g[LRGU]` or `3[LRGU]` also work.
 * cutpoint variant atoms (OVL1/OVL2/OVU1) and the phosphate after a chain break are exact mirrors,
 * named L-RNA residues at chain ends get terminus variants,
 * χ restraints (syn/anti) give equal energies for D and the L mirror.
+* a D:L pair (an L residue with the same base atoms as the D residue it replaces) gets the same low-res
+  base–base energies and the same base-pair classification as the D:D pair (fails without `base_stub_for_pair()`).
 
 Verified: all tests above pass in a release build, as do the existing `chemical`, `sequence`, `pose/rna`
 and `test_rna_sfxn` unit tests.

@@ -49,6 +49,7 @@
 #include <core/chemical/ChemicalManager.hh>
 #include <core/import_pose/import_pose.hh>
 #include <utility/string_util.hh>
+#include <numeric/xyzMatrix.hh>
 #include <core/pose/rna/BasePair.hh>
 #include <core/pose/rna/RNA_BasePairClassifier.hh>
 #include <core/optimization/AtomTreeMultifunc.hh>
