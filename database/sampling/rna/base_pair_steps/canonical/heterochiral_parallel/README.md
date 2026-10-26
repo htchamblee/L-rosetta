@@ -37,5 +37,12 @@ the A·U pair was formed at all, and within that run they fall in a couple of lo
 their diversity is lower than the count suggests. The parallel heterochiral A·U pair is weak and 300 ns
 per replica does not determine how weak.
 
-The reciprocal entries `gg_cc` and `ug_ac` (mirror each frame, swap the strands) have not been generated
-from these runs.
+`gg_cc` (2387) and `ug_ac` (212) are the reciprocals, made from the two entries above by reflecting each
+step and swapping its strands so the D strand is first again (`steplib/mirror_steps.py`). They are
+right-handed, as the mirror of a left-handed step must be, and a construct whose L strand comes first in
+the pose asks for them rather than for `cc_gg` / `ac_ug`.
+
+Note for anyone regenerating these: BinarySilentStruct stores a one-letter sequence, and L residues
+share the letters `a c g u` with D, so chirality does NOT survive the roundtrip out of a silent file -
+every residue comes back labelled as D. The coordinates are intact, so the mirror script measures
+chirality from the signed volume at C4' rather than trusting the residue names.
