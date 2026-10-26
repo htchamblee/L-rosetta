@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,14 +13,18 @@ jobs:
 
     steps:
       - name: Checkout repository (with submodules)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - name: Cache Rosetta build directory
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
-          path: source/build
+          # .sconsign.dblite holds the signatures scons uses to decide what is
+          # up to date.  Without it a restored build/ is rebuilt from scratch.
+          path: |
+            source/build
+            source/.sconsign.dblite
           key: ${{ runner.os }}-rosetta-build-${{ hashFiles('source/**/*.cc', 'source/**/*.hh', 'source/**/*.cpp', 'source/**/*.h', 'source/SConstruct', 'source/**/SConscript') }}
           restore-keys: |
             ${{ runner.os }}-rosetta-build-
@@ -33,5 +38,5 @@ jobs:
             bash -c '
               apt-get update && \
               apt-get install -y build-essential python3 python3-dev zlib1g-dev && \
-              ./scons.py -j2 mode=release rna_denovo
+              python3 ./scons.py -j4 mode=release rna_denovo
             '
