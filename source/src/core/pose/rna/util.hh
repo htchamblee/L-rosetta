@@ -97,6 +97,13 @@ apply_non_main_chain_sugar_coords(
 	Pose const & reference_pose,
 	Size const i);
 
+/// @brief Convert non-main-chain sugar coordinates taken from a D-RNA source (vall, ideal
+///  geometry) into those of the mirror-image sugar, for use on an L-RNA residue.
+/// @details The coordinates are expressed in the C3'/C4'/C5' stub, whose third axis is a cross
+///  product; reflecting the residue therefore leaves the local x and y unchanged and negates z.
+utility::vector1< Vector >
+mirror_non_main_chain_sugar_coords( utility::vector1< Vector > const & non_main_chain_sugar_coords );
+
 void
 apply_ideal_c2endo_sugar_coords(
 	Pose & pose,
@@ -243,6 +250,12 @@ add_chi_constraints( pose::Pose & pose,
 	core::scoring::func::FuncOP chi_potential_restraint,
 	utility::vector1< Size > const & rna_chi_res );
 
+/// @brief add_chi_constraints() with the spline energies of a D-RNA restraint; L-RNA residues get the mirrored table.
+void
+add_chi_constraints_d_and_l( pose::Pose & pose,
+	utility::vector1< Real > const & energies,
+	utility::vector1< Size > const & rna_chi_res );
+
 void
 add_syn_chi_constraints( core::pose::Pose & pose );
 
@@ -337,6 +350,22 @@ bool
 base_pair_step_moving( core::pose::rna::BasePairStep const & base_pair_step,
 	core::pose::toolbox::AtomLevelDomainMapCOP atom_level_domain_map,
 	core::pose::Pose const & pose );
+
+/// @brief True if the four residues of the step are all D-RNA or all L-RNA; is_l_rna tells which.
+/// @details The base pair step library is D-RNA. All-L steps get its mirror image; mixed steps have no counterpart.
+bool
+base_pair_step_has_uniform_rna_chirality( core::pose::rna::BasePairStep const & base_pair_step,
+	core::pose::Pose const & pose,
+	bool & is_l_rna );
+
+/// @brief True for a parallel step whose two strands each have uniform chirality, opposite to each other (a
+///  heterochiral D/L duplex step). first_strand_is_l tells whether strand (i, i_next) is the L one.
+/// @details The heterochiral step library stores the D strand first, so a step with the L strand first gets
+///  the mirror image.
+bool
+base_pair_step_is_parallel_heterochiral( core::pose::rna::BasePairStep const & base_pair_step,
+	core::pose::Pose const & pose,
+	bool & first_strand_is_l );
 
 bool
 base_pair_moving( core::pose::rna::BasePair const & base_pair,

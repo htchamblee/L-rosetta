@@ -173,7 +173,7 @@ RNA_TorsionPotential::eval_intrares_energy( core::conformation::Residue const & 
 					fade_delta_south_->func( delta ) * chi_pyrimidine_south_potential_->func( chi ) ); //chi
 			}
 		} else {
-			if ( rsd.aa() == core::chemical::na_rgu || rsd.type().na_analogue() == core::chemical::na_rgu ) {
+			if ( rsd.aa() == core::chemical::na_rgu || rsd.aa() == core::chemical::na_lrg || rsd.type().na_analogue() == core::chemical::na_rgu ) {
 				chi_score += ( fade_delta_north_->func( delta ) * chi_north_potential_guanosine_->func( chi ) +
 					fade_delta_south_->func( delta ) * chi_south_potential_guanosine_->func( chi ) ); //chi
 			} else {
@@ -181,7 +181,7 @@ RNA_TorsionPotential::eval_intrares_energy( core::conformation::Residue const & 
 					fade_delta_south_->func( delta ) * chi_south_potential_others_->func( chi ) ); //chi
 			}
 		}
-		if ( ( rsd.aa() == core::chemical::na_rgu || rsd.type().na_analogue() == core::chemical::na_rgu )
+		if ( ( rsd.aa() == core::chemical::na_rgu || rsd.aa() == core::chemical::na_lrg || rsd.type().na_analogue() == core::chemical::na_rgu )
 				&& syn_G_potential_bonus_ != 0.0 ) chi_score += chi_potential_syn_guanosine_bonus_->func( chi );
 		intrares_side_chain_score_ += chi_score;
 		if ( verbose_ )  TR << "chi score " << chi_score << std::endl;
@@ -354,6 +354,10 @@ RNA_TorsionPotential::get_f1_f2( core::id::TorsionID const & torsion_id, pose::P
 	} else {
 		return false;
 	}
+	// The potentials see tau = factor * theta. On the point-inverted coordinates above, f1 already
+	// comes out as the f1 of tau, but f2 has the wrong sign for L-RNA: d(tau)/dx = factor * d(theta)/dx.
+	// For D-RNA factor is 1 and this is an exact no-op.
+	f2 *= factor;
 
 	return true;
 }
@@ -390,6 +394,13 @@ RNA_TorsionPotential::eval_atom_derivative(
 
 		conformation::Residue const & rsd( pose.residue( seqpos ) );
 
+		// residue_pair_energy() scores a covalent L/D junction as 0, so its derivative terms are skipped too.
+		auto const mixed_chirality = []( chemical::ResidueType const & a, chemical::ResidueType const & b ) {
+			return ( a.is_l_rna() && b.is_d_rna() ) || ( a.is_d_rna() && b.is_l_rna() );
+		};
+		bool const prev_mixed = seqpos > 1 && mixed_chirality( pose.residue_type( seqpos - 1 ), rsd.type() );
+		bool const next_mixed = seqpos < nres && mixed_chirality( rsd.type(), pose.residue_type( seqpos + 1 ) );
+
 		Real const alpha =   factor * principal_angle_degrees(   rsd.mainchain_torsion( ALPHA ) );
 		Real const beta  =   factor * principal_angle_degrees(   rsd.mainchain_torsion( BETA ) );
 		Real const gamma =   factor * principal_angle_degrees(   rsd.mainchain_torsion( GAMMA ) );
@@ -404,11 +415,10 @@ RNA_TorsionPotential::eval_atom_derivative(
 		Vector f1( 0.0 ), f2( 0.0 );
 
 		///////////////////////////////ALPHA//////////////////////////////
-		if ( seqpos > 1 && pose.residue( seqpos - 1 ).is_RNA() && get_f1_f2( id::TorsionID( seqpos, id::BB, ALPHA ), pose, id, f1, f2 ) ) {
+		if ( !prev_mixed && seqpos > 1 && pose.residue( seqpos - 1 ).is_RNA() && get_f1_f2( id::TorsionID( seqpos, id::BB, ALPHA ), pose, id, f1, f2 ) ) {
 
 			Real dE_dtorsion = alpha_potential_->dfunc( alpha );
 
-			// TODO: avoid scoring L-D junctions here too.
 			Real const factor2 = pose.residue_type( seqpos - 1 ).is_d_rna() ? 1.0 : -1.0;
 			Real const previous_zeta = factor2 * numeric::principal_angle_degrees( pose.residue( seqpos - 1 ).mainchain_torsion( ZETA ) );  ///NEED TO CHANGE THIS AS WELL
 			dE_dtorsion += ( fade_alpha_sc_minus_->dfunc( alpha ) * zeta_alpha_sc_minus_potential_->func( previous_zeta ) +
@@ -451,7 +461,7 @@ RNA_TorsionPotential::eval_atom_derivative(
 						fade_delta_south_->dfunc( delta ) * chi_pyrimidine_south_potential_->func( chi ) );
 				}
 			} else {
-				if ( rsd.aa() == core::chemical::na_rgu || rsd.type().na_analogue() == core::chemical::na_rgu ) {
+				if ( rsd.aa() == core::chemical::na_rgu || rsd.aa() == core::chemical::na_lrg || rsd.type().na_analogue() == core::chemical::na_rgu ) {
 					dE_dtorsion += ( fade_delta_north_->dfunc( delta ) * chi_north_potential_guanosine_->func( chi ) +
 						fade_delta_south_->dfunc( delta ) * chi_south_potential_guanosine_->func( chi ) );
 
@@ -467,7 +477,7 @@ RNA_TorsionPotential::eval_atom_derivative(
 			dE_dtorsion += ( fade_delta_north_->dfunc( delta ) * nu1_north_potential_->func( nu1 ) +
 				fade_delta_south_->dfunc( delta ) * nu1_south_potential_->func( nu1 ) );
 
-			if ( seqpos < nres && pose.residue( seqpos + 1 ).is_RNA() ) {
+			if ( !next_mixed && seqpos < nres && pose.residue( seqpos + 1 ).is_RNA() ) {
 				dE_dtorsion += ( fade_delta_north_->dfunc( delta ) * epsilon_north_potential_->func( epsilon ) +
 					fade_delta_south_->dfunc( delta ) * epsilon_south_potential_->func( epsilon ) );
 			}
@@ -477,7 +487,7 @@ RNA_TorsionPotential::eval_atom_derivative(
 		}
 
 		////////////////////////////////////EPSILON////////////////////////////////////////////////
-		if ( seqpos < nres && pose.residue( seqpos + 1 ).is_RNA() && get_f1_f2( id::TorsionID( seqpos, id::BB, EPSILON ), pose, id, f1, f2 ) ) {
+		if ( !next_mixed && seqpos < nres && pose.residue( seqpos + 1 ).is_RNA() && get_f1_f2( id::TorsionID( seqpos, id::BB, EPSILON ), pose, id, f1, f2 ) ) {
 			Real const dE_dtorsion = ( fade_delta_north_->func( delta ) * epsilon_north_potential_->dfunc( epsilon ) +
 				fade_delta_south_->func( delta ) * epsilon_south_potential_->dfunc( epsilon ) );
 
@@ -486,9 +496,8 @@ RNA_TorsionPotential::eval_atom_derivative(
 		}
 
 		////////////////////////////////////ZETA////////////////////////////////////////////////
-		if ( seqpos < nres && pose.residue( seqpos + 1 ).is_RNA() && get_f1_f2( id::TorsionID( seqpos, id::BB, ZETA ), pose, id, f1, f2 ) ) {
+		if ( !next_mixed && seqpos < nres && pose.residue( seqpos + 1 ).is_RNA() && get_f1_f2( id::TorsionID( seqpos, id::BB, ZETA ), pose, id, f1, f2 ) ) {
 
-			// TODO: avoid scoring L-D junctions here too.
 			Real const factor2 = pose.residue_type( seqpos + 1 ).is_d_rna() ? 1.0 : -1.0;
 
 			Real const next_alpha = factor2 * numeric::principal_angle_degrees(   pose.residue( seqpos + 1 ).mainchain_torsion( ALPHA ) );  ///NEED TO CHANGE THIS AS WELL
@@ -515,7 +524,7 @@ RNA_TorsionPotential::eval_atom_derivative(
 						fade_delta_south_->func( delta ) * chi_pyrimidine_south_potential_->dfunc( chi ) );
 				}
 			} else {
-				if ( rsd.aa() == core::chemical::na_rgu || rsd.type().na_analogue() == core::chemical::na_rgu ) {
+				if ( rsd.aa() == core::chemical::na_rgu || rsd.aa() == core::chemical::na_lrg || rsd.type().na_analogue() == core::chemical::na_rgu ) {
 					dE_dtorsion = ( fade_delta_north_->func( delta ) * chi_north_potential_guanosine_->dfunc( chi ) +
 						fade_delta_south_->func( delta ) * chi_south_potential_guanosine_->dfunc( chi ) );
 				} else {
@@ -524,7 +533,7 @@ RNA_TorsionPotential::eval_atom_derivative(
 				}
 			}
 
-			if ( ( rsd.aa() == core::chemical::na_rgu || rsd.type().na_analogue() == core::chemical::na_rgu ) && syn_G_potential_bonus_ != 0.0 ) dE_dtorsion += chi_potential_syn_guanosine_bonus_->dfunc( chi );
+			if ( ( rsd.aa() == core::chemical::na_rgu || rsd.aa() == core::chemical::na_lrg || rsd.type().na_analogue() == core::chemical::na_rgu ) && syn_G_potential_bonus_ != 0.0 ) dE_dtorsion += chi_potential_syn_guanosine_bonus_->dfunc( chi );
 
 			F1 += radians2degrees * dE_dtorsion * weights[ rna_torsion ] * f1;
 			F2 += radians2degrees * dE_dtorsion * weights[ rna_torsion ] * f2;

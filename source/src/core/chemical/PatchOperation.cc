@@ -41,6 +41,7 @@
 #include <ObjexxFCL/string.functions.hh>
 
 #include <core/chemical/MutableICoorRecord.hh> // AUTO IWYU For MutableICoorRecord
+#include <core/chemical/MutableResidueConnection.hh>
 
 
 #ifdef    SERIALIZATION
@@ -1014,7 +1015,9 @@ SetICoor::apply( MutableResidueType & rsd ) const
 	check_residue_has_atom( stub2, rsd, "SetICoor patch:");
 	check_residue_has_atom( stub3, rsd, "SetICoor patch:");
 	bool const rebuild_icoor_xyz( true );
-	rsd.set_icoor( atom, phi_, theta_, d_, stub1, stub2, stub3, rebuild_icoor_xyz );
+	// RNA patches are written for D-RNA. On an L-RNA type (the mirror image) the dihedral flips sign.
+	Real const phi( rsd.is_l_rna() ? -phi_ : phi_ );
+	rsd.set_icoor( atom, phi, theta_, d_, stub1, stub2, stub3, rebuild_icoor_xyz );
 	return false;
 }
 
@@ -1658,18 +1661,22 @@ ChiralFlipNaming::apply( MutableResidueType & rsd ) const {
 	} else if ( rsd.aa() == na_rad ) {
 		rsd.aa( na_lra );
 		rsd.name3( " 0A" );
+		rsd.na_analogue( "RAD" ); // base identity for fragment lookup, VDW, base-pair classification, ...
 		rsd.interchangeability_group( " 0A" );
 	} else if ( rsd.aa() == na_rcy ) {
 		rsd.aa( na_lrc );
 		rsd.name3( " 0C" );
+		rsd.na_analogue( "RCY" ); // base identity for fragment lookup, VDW, base-pair classification, ...
 		rsd.interchangeability_group( " 0C" );
 	} else if ( rsd.aa() == na_rgu ) {
 		rsd.aa( na_lrg );
 		rsd.name3( " 0G" );
+		rsd.na_analogue( "RGU" ); // base identity for fragment lookup, VDW, base-pair classification, ...
 		rsd.interchangeability_group( " 0G" );
 	} else if ( rsd.aa() == na_ura ) {
 		rsd.aa( na_lur );
 		rsd.name3( " 0U" );
+		rsd.na_analogue( "URA" ); // base identity for fragment lookup, VDW, base-pair classification, ...
 		rsd.interchangeability_group( " 0U" );
 	} else {
 		// e.g. DHLU, DC01--will be caught later and set to DAL etc. for canonicals
@@ -1740,7 +1747,29 @@ ChiralFlipAtoms::apply( MutableResidueType & rsd ) const {
 			icoor1->stub_atom3(),
 			true );
 	}
+
+	// RNA: also mirror the ICOORs of the residue connections (LOWER/UPPER). They place the neighbouring
+	// residue's linking atom and, through it, the phosphate oxygens and the cutpoint virtual atoms.
+	// (Not done for amino acids, whose D/L regression tests depend on the current behaviour.)
+	if ( rsd.is_d_rna() ) {
+		for ( Size c = 1; c <= rsd.n_possible_residue_connections(); ++c ) {
+			MutableResidueConnection & conn = rsd.residue_connection( c );
+			MutableICoorRecord const & ic = conn.icoor();
+			if ( ic.stub_atom1() == ic.stub_atom2() ) continue;
+			conn.icoor( MutableICoorRecord( -1.0 * ic.phi(), ic.theta(), ic.d(), ic.stub_atom1(), ic.stub_atom2(), ic.stub_atom3() ) );
+		}
+	}
 	rsd.fill_ideal_xyz_from_icoor();
+
+	// Proton-chi sampling (the RNA 2'-OH) must be mirrored too; extra samples are symmetric offsets.
+	if ( rsd.is_d_rna() ) {
+		for ( Size chino = 1; chino <= rsd.nchi(); ++chino ) {
+			if ( !rsd.is_proton_chi( chino ) ) continue;
+			utility::vector1< Real > samples( rsd.proton_chi_samples_for_chi( chino ) );
+			for ( Real & sample : samples ) sample = -sample;
+			rsd.set_proton_chi( chino, samples, rsd.proton_chi_extra_samples_for_chi( chino ) );
+		}
+	}
 
 	return false;
 }

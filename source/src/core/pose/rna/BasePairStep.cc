@@ -31,12 +31,21 @@ BasePairStep::BasePairStep( Size const i, Size const i_next,
 	base_pair_step_ = std::make_pair( std::make_pair( i, i_next ), std::make_pair( j, j_next ) );
 }
 
+BasePairStep::BasePairStep( Size const i, Size const i_next,
+	Size const j, Size const j_next, bool const parallel ):
+	BasePairStep( i, i_next, j, j_next )
+{
+	if ( parallel ) runtime_assert( j_next == j+1 );
+	parallel_ = parallel;
+}
+
 //Destructor
 BasePairStep::~BasePairStep() = default;
 
 std::ostream &
 operator <<( std::ostream & os, BasePairStep const & bps ){
 	os << bps.base_pair_step_.first.first << "-" << bps.base_pair_step_.first.second << " " << bps.base_pair_step_.second.first << "-" << bps.base_pair_step_.second.second;
+	if ( bps.parallel_ ) os << " (parallel)";
 	return os;
 }
 

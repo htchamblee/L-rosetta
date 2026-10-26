@@ -129,6 +129,41 @@ get_rna_base_coordinate_system( core::conformation::Residue const & rsd, numeric
 core::kinematics::Stub
 get_rna_base_coordinate_system_stub( core::conformation::Residue const & rsd );
 
+/// @brief +1.0 for D-RNA (and any residue that is not L-RNA), -1.0 for L-RNA.
+/// @details Every dihedral of an L-RNA residue is the negative of the matching dihedral
+///  in its D enantiomer, so multiplying by this factor maps a torsion into the
+///  D-RNA frame used by the vall library, the fitted torsion potentials, and the pucker cutoffs.
+core::Real
+rna_chirality_factor( chemical::ResidueType const & rsd_type );
+
+/// @brief True for the L-RNA AA types (na_lra, na_lrc, na_lrg, na_lur).
+bool
+is_l_rna_aa( chemical::AA const aa );
+
+/// @brief The D-RNA AA of an L-RNA AA (na_lra -> na_rad, ...); any other AA is returned unchanged.
+chemical::AA
+rna_d_equivalent_aa( chemical::AA const aa );
+
+/// @brief Base coordinate system for scoring and classification.
+/// @details Identical to get_rna_base_coordinate_system() for D-RNA. For L-RNA the z axis is
+///  negated, so a point's local coordinates match those of the mirror-image point around the
+///  D enantiomer, and D-derived base-pair/stacking statistics apply unchanged to L:L pairs.
+///  The result is a left-handed frame for L-RNA: use it only to measure geometry, never to build it.
+numeric::xyzMatrix< core::Real >
+get_rna_base_coordinate_system_chirality_normalized( core::conformation::Residue const & rsd, numeric::xyzVector<core::Real> const & centroid );
+
+core::kinematics::Stub
+get_rna_base_coordinate_system_stub_chirality_normalized( core::conformation::Residue const & rsd );
+
+/// @brief Base stub of rsd for scoring its base against the base of partner.
+/// @details normalized_stub is rsd's chirality-normalized stub. Base-base geometry does not depend on
+///  sugar chirality, so a D:L pair is scored like the D:D pair with the same base coordinates: both
+///  residues use the raw (D-convention) frame, i.e. the L residue's z axis is negated back. D:D and L:L
+///  pairs keep the normalized stubs.
+core::kinematics::Stub
+base_stub_for_pair( core::kinematics::Stub const & normalized_stub, core::conformation::Residue const & rsd,
+	core::conformation::Residue const & partner );
+
 bool
 is_base_phosphate_atom_pair( conformation::Residue const & rsd_1, conformation::Residue const & rsd_2, Size const atomno_1, Size const atomno_2);
 

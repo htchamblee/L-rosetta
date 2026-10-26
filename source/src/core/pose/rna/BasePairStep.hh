@@ -45,6 +45,11 @@ public:
 	BasePairStep( Size const i, Size const i_next,
 		Size const j, Size const j_next );
 
+	/// @brief Parallel step: pairs i.j and i_next.j_next, with j_next == j+1 (strands run the same way, as in a
+	///  heterochiral D/L Watson-Crick duplex). The default, antiparallel step pairs i.j_next and i_next.j.
+	BasePairStep( Size const i, Size const i_next,
+		Size const j, Size const j_next, bool const parallel );
+
 	//destructor
 	~BasePairStep() override;
 
@@ -52,6 +57,7 @@ public:
 	Size const & i_next() const { return base_pair_step_.first.second; };
 	Size const & j() const { return base_pair_step_.second.first; };
 	Size const & j_next() const { return base_pair_step_.second.second; };
+	bool parallel() const { return parallel_; };
 
 	friend
 	std::ostream &
@@ -64,7 +70,8 @@ public:
 		if ( lhs.base_pair_step_.first.first   == rhs.base_pair_step_.first.first &&
 				lhs.base_pair_step_.first.second  == rhs.base_pair_step_.first.second &&
 				lhs.base_pair_step_.second.first  == rhs.base_pair_step_.second.first &&
-				lhs.base_pair_step_.second.second == rhs.base_pair_step_.second.second ) {
+				lhs.base_pair_step_.second.second == rhs.base_pair_step_.second.second &&
+				lhs.parallel_ == rhs.parallel_ ) {
 			return true;
 		}
 		return false;
@@ -74,6 +81,7 @@ private:
 
 	typedef std::pair< Size, Size > DinucleotideStrand;
 	std::pair< DinucleotideStrand, DinucleotideStrand > base_pair_step_;
+	bool parallel_ = false;
 
 };
 

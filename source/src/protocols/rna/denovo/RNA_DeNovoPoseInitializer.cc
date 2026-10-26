@@ -18,6 +18,7 @@
 #include <core/pose/rna/secstruct_legacy/RNA_SecStructLegacyInfo.hh>
 #include <core/import_pose/RNA_JumpMover.hh>
 #include <core/import_pose/libraries/RNA_LibraryManager.hh>
+#include <core/import_pose/libraries/BasePairStepLibrary.hh>
 #include <core/import_pose/RNA_DeNovoParameters.hh>
 #include <core/import_pose/RNA_BasePairHandler.hh>
 #include <core/pose/toolbox/AtomLevelDomainMap.hh>
@@ -35,6 +36,8 @@
 #include <core/pose/util.hh>
 #include <core/pose/variant_util.hh>
 #include <core/pose/rna/util.hh>
+#include <basic/options/option.hh>
+#include <basic/options/keys/rna.OptionKeys.gen.hh>
 #include <core/pose/full_model_info/FullModelInfo.hh>
 #include <core/pose/full_model_info/util.hh>
 #include <core/pose/full_model_info/FullModelParameters.hh>
@@ -412,6 +415,16 @@ RNA_DeNovoPoseInitializer::setup_fold_tree_legacy( pose::Pose & pose,
 
 			// some base pair steps are actually not moveable.
 			if ( !base_pair_step_moving( base_pair_step, rna_jump_mover.atom_level_domain_map(), pose ) ) continue;
+
+			// RNA_ChunkLibrary gives a mixed D/L step no chunk, so do not force a cutpoint inside it. The exception is a
+			// parallel heterochiral step (D/L duplex) whose sequence is in the heterochiral step library.
+			static bool const invert_for_l_rna = basic::options::option[ basic::options::OptionKeys::rna::denovo::invert_torsions_for_l_rna ]();
+			bool is_l_step( false );
+			if ( base_pair_step.parallel() ) {
+				if ( !invert_for_l_rna || !core::pose::rna::base_pair_step_is_parallel_heterochiral( base_pair_step, pose, is_l_step ) ) continue;
+				core::import_pose::libraries::BasePairStepSequence const base_pair_step_sequence( pose.sequence(), base_pair_step );
+				if ( !core::import_pose::libraries::RNA_LibraryManager::get_instance()->canonical_base_pair_step_library().has_value( base_pair_step_sequence ) ) continue;
+			} else if ( invert_for_l_rna && !core::pose::rna::base_pair_step_has_uniform_rna_chirality( base_pair_step, pose, is_l_step ) ) continue;
 
 			// following assert (jumps between top & bottom base pair of base pair step) do not hold if one of the base pair is inside a fixed input PDB.
 			//   runtime_assert( rna_params_.check_in_pairing_sets( obligate_pairing_sets, BasePair( base_pair_step.i(),      base_pair_step.j_next() ) ) );

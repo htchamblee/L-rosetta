@@ -542,6 +542,15 @@ apply_non_main_chain_sugar_coords(
 	}
 }
 
+/////////////////////////////////////////////////////////////////////
+utility::vector1< Vector >
+mirror_non_main_chain_sugar_coords( utility::vector1< Vector > const & non_main_chain_sugar_coords )
+{
+	utility::vector1< Vector > mirrored( non_main_chain_sugar_coords );
+	for ( Vector & v : mirrored ) v.z( -v.z() );
+	return mirrored;
+}
+
 // AMW TODO: find invocations of this function, replace with RNA_IdealCoord
 // Used in ConstrainToIdealMover
 ////////////////////////////////////////////////////////////////////
@@ -559,24 +568,29 @@ apply_ideal_c2endo_sugar_coords(
 		return;
 	}
 
+	// L-RNA residues get the mirror image: negated torsions and mirrored sugar coordinates.
+	bool const is_l_rna = pose.residue_type( i ).is_l_rna();
+	Real const factor = core::chemical::rna::rna_chirality_factor( pose.residue_type( i ) );
+
 	//Torsion angles associated with a 2'-endo sugar in 1jj2 (large ribosomal subunit xtal structure ).
-	pose.set_torsion( id::TorsionID( i, id::BB, 1), 69.404192 );
-	pose.set_torsion( id::TorsionID( i, id::BB, 2), -173.031790 );
-	pose.set_torsion( id::TorsionID( i, id::BB, 3), 58.877828 );
-	pose.set_torsion( id::TorsionID( i, id::BB, 4), 147.202313 );
-	pose.set_torsion( id::TorsionID( i, id::BB, 5), -85.360367 );
-	pose.set_torsion( id::TorsionID( i, id::BB, 6), -38.381256 );
-	pose.set_torsion( id::TorsionID( i, id::CHI, 1), 111.708846 );
-	pose.set_torsion( id::TorsionID( i, id::CHI, 2), -36.423711 );
-	pose.set_torsion( id::TorsionID( i, id::CHI, 3), 156.438552 );
-	pose.set_torsion( id::TorsionID( i, id::CHI, 4), 179.890442 );
+	pose.set_torsion( id::TorsionID( i, id::BB, 1), factor * 69.404192 );
+	pose.set_torsion( id::TorsionID( i, id::BB, 2), factor * -173.031790 );
+	pose.set_torsion( id::TorsionID( i, id::BB, 3), factor * 58.877828 );
+	pose.set_torsion( id::TorsionID( i, id::BB, 4), factor * 147.202313 );
+	pose.set_torsion( id::TorsionID( i, id::BB, 5), factor * -85.360367 );
+	pose.set_torsion( id::TorsionID( i, id::BB, 6), factor * -38.381256 );
+	pose.set_torsion( id::TorsionID( i, id::CHI, 1), factor * 111.708846 );
+	pose.set_torsion( id::TorsionID( i, id::CHI, 2), factor * -36.423711 );
+	pose.set_torsion( id::TorsionID( i, id::CHI, 3), factor * 156.438552 );
+	pose.set_torsion( id::TorsionID( i, id::CHI, 4), factor * 179.890442 );
 
-	static utility::vector1< Vector > _non_main_chain_sugar_coords;
-	_non_main_chain_sugar_coords.push_back( Vector(  0.329122,   -0.190929,   -1.476983  ) );
-	_non_main_chain_sugar_coords.push_back( Vector( -0.783512,   -1.142556,   -1.905737  ) );
-	_non_main_chain_sugar_coords.push_back( Vector( -1.928054,   -0.731911,   -1.195034  ) );
+	static utility::vector1< Vector > const _non_main_chain_sugar_coords {
+		Vector(  0.329122,   -0.190929,   -1.476983  ),
+		Vector( -0.783512,   -1.142556,   -1.905737  ),
+		Vector( -1.928054,   -0.731911,   -1.195034  ) };
+	static utility::vector1< Vector > const _mirrored_non_main_chain_sugar_coords( mirror_non_main_chain_sugar_coords( _non_main_chain_sugar_coords ) );
 
-	apply_non_main_chain_sugar_coords( _non_main_chain_sugar_coords, pose, pose, i );
+	apply_non_main_chain_sugar_coords( is_l_rna ? _mirrored_non_main_chain_sugar_coords : _non_main_chain_sugar_coords, pose, pose, i );
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -585,7 +599,8 @@ assign_pucker(
 	Pose const & pose,
 	Size const rsd_id
 ) {
-	Real const delta = pose.torsion( id::TorsionID( rsd_id, id::BB,  4 ) );
+	// L-RNA deltas are the negatives of their D-RNA counterparts.
+	Real const delta = core::chemical::rna::rna_chirality_factor( pose.residue_type( rsd_id ) ) * pose.torsion( id::TorsionID( rsd_id, id::BB,  4 ) );
 	PuckerState const pucker_state = ( delta < torsion_info.delta_cutoff() ) ? NORTH : SOUTH;
 	return pucker_state;
 }
@@ -620,9 +635,10 @@ apply_pucker(
 			nu2 = torsion_info.nu2_south();
 			nu1 = torsion_info.nu1_south();
 		}
-		pose.set_torsion( id::TorsionID( i, id::BB,  4 ), delta );
-		pose.set_torsion( id::TorsionID( i, id::CHI, 2 ), nu2 );
-		pose.set_torsion( id::TorsionID( i, id::CHI, 3 ), nu1 );
+		Real const factor = core::chemical::rna::rna_chirality_factor( pose.residue_type( i ) );
+		pose.set_torsion( id::TorsionID( i, id::BB,  4 ), factor * delta );
+		pose.set_torsion( id::TorsionID( i, id::CHI, 2 ), factor * nu2 );
+		pose.set_torsion( id::TorsionID( i, id::CHI, 3 ), factor * nu1 );
 	}
 }
 ////////////////////////////////////////////////////////////////////
@@ -643,7 +659,10 @@ position_cutpoint_phosphate_torsions( pose::Pose & current_pose,
 
 	static const ResidueTypeSetCOP rsd_set = current_pose.residue_type_set_for_pose( core::chemical::FULL_ATOM_t );
 
-	chemical::AA res_aa = chemical::na_rad; //aa_from_name( "RAD" );
+	// The dummy residue only supplies O3' (LOWER of the 3' residue); give it the 3' residue's chirality.
+	chemical::ResidueType const & three_prime_type = current_pose.residue_type( three_prime_chainbreak );
+	Real const chirality_factor = chemical::rna::rna_chirality_factor( three_prime_type );
+	chemical::AA res_aa = three_prime_type.is_l_rna() ? chemical::na_lra : chemical::na_rad; //aa_from_name( "RAD" );
 	ResidueOP new_rsd = conformation::ResidueFactory::create_residue( *( rsd_set->get_representative_type_aa( res_aa ) ) );
 
 	current_pose.prepend_polymer_residue_before_seqpos( *new_rsd, three_prime_chainbreak, true );
@@ -653,7 +672,8 @@ position_cutpoint_phosphate_torsions( pose::Pose & current_pose,
 	//so the manual setting below is actually not needed, May 24, 2010.. Parin S.
 	//These are the initial value of virtual upper and lower cutpoint atom.
 	//Actually only the alpha (id::BB, 1) is important here since it set the position of O3' (LOWER) atom which in turn determines  OP2 and OP1 atom
-	current_pose.set_torsion( TorsionID( three_prime_chainbreak + 1, id::BB, 1 ), -64.027359 );
+	// For L-RNA the A-form alpha is mirrored (chirality_factor = -1); without this OP1/OP2 come out swapped.
+	current_pose.set_torsion( TorsionID( three_prime_chainbreak + 1, id::BB, 1 ), chirality_factor * -64.027359 );
 	current_pose.delete_polymer_residue( three_prime_chainbreak );
 }
 
@@ -1617,6 +1637,30 @@ add_chi_constraints( pose::Pose & pose,
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
+// Chi restraints are defined for D-RNA. For L-RNA residues the angle is mirrored (chi -> -chi), which on the
+// 36-node circular spline (nodes at 5, 15, ..., 355 degrees) maps node q onto node 37-q.
+void
+add_chi_constraints_d_and_l( pose::Pose & pose,
+	utility::vector1< Real > const & energies,
+	utility::vector1< Size > const & rna_chi_res )
+{
+	using namespace core::scoring::func;
+	using namespace core::pose::full_model_info;
+	utility::vector1< Size > const & res_list = const_full_model_info( pose ).res_list();
+	utility::vector1< Size > d_res, l_res;
+	for ( Size const n : rna_chi_res ) {
+		if ( res_list.has_value( n ) && pose.residue_type( res_list.index( n ) ).is_l_rna() ) l_res.push_back( n );
+		else d_res.push_back( n );
+	}
+	if ( !d_res.empty() ) add_chi_constraints( pose, utility::pointer::make_shared< CircularSplineFunc >( 1.0, energies, true /*convert_to_degrees*/ ), d_res );
+	if ( !l_res.empty() ) {
+		utility::vector1< Real > energies_l( energies.size() );
+		for ( Size q = 1; q <= energies.size(); ++q ) energies_l[ q ] = energies[ energies.size() + 1 - q ];
+		add_chi_constraints( pose, utility::pointer::make_shared< CircularSplineFunc >( 1.0, energies_l, true /*convert_to_degrees*/ ), l_res );
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
 void
 add_syn_chi_constraints( core::pose::Pose & pose ) {
 	using namespace core::scoring::func;
@@ -1626,8 +1670,7 @@ add_syn_chi_constraints( core::pose::Pose & pose ) {
 	utility::vector1< Real > energies( 36, 20.0 ); // spaced at 5, 10, ... 355 degrees. Set penalty to be +20.0
 	// zero out function at permissible vals. (syn should be -120.0 to 0.0 --> 240.0 to 360.0)
 	for ( Size q = 24; q <= 36; q++ ) energies[ q ] = 0.0;
-	FuncOP chi_potential_syn_restraint( new CircularSplineFunc( 1.0, energies, true /*convert_to_degrees*/ ) );
-	add_chi_constraints( pose, chi_potential_syn_restraint, const_full_model_info( pose ).rna_syn_chi_res() );
+	add_chi_constraints_d_and_l( pose, energies, const_full_model_info( pose ).rna_syn_chi_res() );
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1640,8 +1683,7 @@ add_anti_chi_constraints( core::pose::Pose & pose ) {
 	utility::vector1< Real > energies( 36, 20.0 ); // spaced at 5, 10, ... 355 degrees. Set penalty to be +20.0
 	// zero out function at permissible vals. (anti should be 0.0 to 120.0)
 	for ( Size q = 1; q <= 12; q++ ) energies[ q ] = 0.0;
-	FuncOP chi_potential_anti_restraint( new CircularSplineFunc( 1.0, energies, true /*convert_to_degrees*/ ) );
-	add_chi_constraints( pose, chi_potential_anti_restraint, const_full_model_info( pose ).rna_anti_chi_res() );
+	add_chi_constraints_d_and_l( pose, energies, const_full_model_info( pose ).rna_anti_chi_res() );
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -2272,6 +2314,32 @@ base_pair_step_moving( core::pose::rna::BasePairStep const & base_pair_step,
 	}
 	// TR << "MOVING? " << pair_moving << std::endl;
 	return pair_moving;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+bool
+base_pair_step_has_uniform_rna_chirality( core::pose::rna::BasePairStep const & base_pair_step,
+	pose::Pose const & pose,
+	bool & is_l_rna )
+{
+	is_l_rna = pose.residue_type( base_pair_step.i() ).is_l_rna();
+	for ( Size const n : { base_pair_step.i_next(), base_pair_step.j(), base_pair_step.j_next() } ) {
+		if ( pose.residue_type( n ).is_l_rna() != is_l_rna ) return false;
+	}
+	return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+bool
+base_pair_step_is_parallel_heterochiral( core::pose::rna::BasePairStep const & base_pair_step,
+	pose::Pose const & pose,
+	bool & first_strand_is_l )
+{
+	if ( !base_pair_step.parallel() ) return false;
+	first_strand_is_l = pose.residue_type( base_pair_step.i() ).is_l_rna();
+	return pose.residue_type( base_pair_step.i_next() ).is_l_rna() == first_strand_is_l &&
+		pose.residue_type( base_pair_step.j() ).is_l_rna() != first_strand_is_l &&
+		pose.residue_type( base_pair_step.j_next() ).is_l_rna() != first_strand_is_l;
 }
 
 /////////////////////////////////////////////////////////////////////////////////

@@ -28,6 +28,7 @@
 #include <core/chemical/ResidueTypeSet.hh>
 #include <core/chemical/ResidueTypeFinder.hh>
 #include <core/chemical/ResidueType.hh>
+#include <core/chemical/VariantType.hh>
 #include <core/chemical/ChemicalManager.hh>
 #include <core/chemical/carbohydrates/CarbohydrateInfo.hh>
 #include <core/chemical/carbohydrates/CarbohydrateInfoManager.hh>
@@ -184,6 +185,17 @@ chemical::ResidueTypeCOPs residue_types_from_sequence(
 			if ( rsd_type == nullptr ) {
 				utility_exit_with_message( " can't find residue type for " + fullname_list[ index ] + " at pos " + utility::to_string(seqpos) +
 					" in sequence "+ sequence_in);
+			}
+
+			// L-RNA is given by name (the 1-4 shorthand expands to e.g. g[LRGU]); give it the chain-terminus
+			// variants that a plain one-letter D-RNA residue gets, so L and D chains are built alike.
+			if ( auto_termini && rsd_type->is_l_rna() ) {
+				if ( ( seqpos == 1 || one_letter_sequence[ seqpos-2 ]=='/' ) && !rsd_type->has_variant_type( chemical::LOWER_TERMINUS_VARIANT ) ) {
+					rsd_type = residue_set.get_residue_type_with_variant_added( *rsd_type, chemical::LOWER_TERMINUS_VARIANT ).get_self_ptr();
+				}
+				if ( ( seqpos == one_letter_sequence.length() || one_letter_sequence[ seqpos ]=='/' ) && !rsd_type->has_variant_type( chemical::UPPER_TERMINUS_VARIANT ) ) {
+					rsd_type = residue_set.get_residue_type_with_variant_added( *rsd_type, chemical::UPPER_TERMINUS_VARIANT ).get_self_ptr();
+				}
 			}
 
 			requested_types.push_back( rsd_type );
